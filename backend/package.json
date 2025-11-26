@@ -9,19 +9,19 @@
     "test": "node test-email.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@sendgrid/mail": "^8.1.0",
+    "@supabase/supabase-js": "^2.38.4",
+    "algosdk": "^3.5.2",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "@supabase/supabase-js": "^2.38.4",
-    "stripe": "^14.5.0",
-    "algosdk": "^2.7.0",
-    "nodemailer": "^6.9.7",
-    "@sendgrid/mail": "^8.1.0",
-    "resend": "^3.0.0",
-    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "axios": "^1.6.2",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7",
+    "resend": "^3.0.0",
+    "stripe": "^14.5.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
