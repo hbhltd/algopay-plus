@@ -1,18 +1,94 @@
-# macOS system files
-.DS_Store
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
 
-# Python cache
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python (keep for potential smart contract development)
 __pycache__/
 *.py[cod]
-
-# Virtual environments
+*$py.class
 venv/
-.env/
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
 
-# Logs and temp files
-*.log
-*.tmp
-
-# IDE settings
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.cache/
+.temp/
+.tmp/
+*.bak
+*.orig
+*.rej
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Secrets & Keys
+*.pem
+*.key
+*.cert
+.env.production
+secrets/
+
+# Build tools
+.cache
+.parcel-cache
+
+# Deployment
+.vercel
+.railway
+.netlify
+
+# Local development
+.local/
