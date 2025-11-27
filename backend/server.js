@@ -173,6 +173,96 @@ app.get('/api/creators/:id/stats', async (req, res) => {
 });
 
 // =====================================================
+// PAYMENT SETTINGS ENDPOINTS
+// =====================================================
+
+// Get payment settings for a creator
+app.get('/api/payment-settings/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    let { data: settings } = await supabase
+      .from('payment_settings')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .single();
+
+    // Create default settings if none exist
+    if (!settings) {
+      const { data: newSettings } = await supabase
+        .from('payment_settings')
+        .insert({ creator_id: creatorId, crypto_enabled: true })
+        .select()
+        .single();
+      settings = newSettings;
+    }
+
+    // Don't send secret keys to frontend
+    const safeSettings = {
+      ...settings,
+      stripe_secret_key: settings.stripe_secret_key ? '***hidden***' : null,
+      paypal_client_secret: settings.paypal_client_secret ? '***hidden***' : null
+    };
+
+    res.json(safeSettings);
+  } catch (error) {
+    console.error('Get payment settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update payment settings
+app.put('/api/payment-settings/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+    const {
+      crypto_enabled,
+      stripe_enabled,
+      stripe_publishable_key,
+      stripe_secret_key,
+      paypal_enabled,
+      paypal_client_id,
+      paypal_client_secret,
+      cashapp_enabled,
+      cashapp_tag
+    } = req.body;
+
+    // Build update object
+    const updates = {};
+    if (crypto_enabled !== undefined) updates.crypto_enabled = crypto_enabled;
+    if (stripe_enabled !== undefined) updates.stripe_enabled = stripe_enabled;
+    if (stripe_publishable_key) updates.stripe_publishable_key = stripe_publishable_key;
+    if (stripe_secret_key && stripe_secret_key !== '***hidden***') updates.stripe_secret_key = stripe_secret_key;
+    if (paypal_enabled !== undefined) updates.paypal_enabled = paypal_enabled;
+    if (paypal_client_id) updates.paypal_client_id = paypal_client_id;
+    if (paypal_client_secret && paypal_client_secret !== '***hidden***') updates.paypal_client_secret = paypal_client_secret;
+    if (cashapp_enabled !== undefined) updates.cashapp_enabled = cashapp_enabled;
+    if (cashapp_tag) updates.cashapp_tag = cashapp_tag;
+
+    const { data, error } = await supabase
+      .from('payment_settings')
+      .update(updates)
+      .eq('creator_id', creatorId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Don't send secrets back
+    const safeData = {
+      ...data,
+      stripe_secret_key: data.stripe_secret_key ? '***hidden***' : null,
+      paypal_client_secret: data.paypal_client_secret ? '***hidden***' : null
+    };
+
+    res.json(safeData);
+  } catch (error) {
+    console.error('Update payment settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // DONATION ENDPOINTS
 // =====================================================
 
