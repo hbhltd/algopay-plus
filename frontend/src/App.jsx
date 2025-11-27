@@ -89,6 +89,8 @@ function App() {
       setCurrentPage('signup');
     } else if (path === '/dashboard') {
       setCurrentPage('dashboard');
+    } else if (path === '/payment-settings') {
+      setCurrentPage('payment-settings');
     } else {
       setCurrentPage('landing');
     }
@@ -113,6 +115,7 @@ function App() {
         {currentPage === 'landing' && <LandingPage navigate={navigate} />}
         {currentPage === 'signup' && <SignupPage navigate={navigate} />}
         {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
+        {currentPage === 'payment-settings' && <PaymentSettingsPage navigate={navigate} />}
         {currentPage === 'creator' && <CreatorPage username={creatorUsername} navigate={navigate} />}
       </div>
     </AuthProvider>
@@ -409,6 +412,12 @@ function DashboardPage({ navigate }) {
             👁️ View My Page
           </button>
           <button
+            onClick={() => navigate('payment-settings')}
+            style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            💳 Payment Settings
+          </button>
+          <button
             onClick={disconnectWallet}
             style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
           >
@@ -466,14 +475,462 @@ function DashboardPage({ navigate }) {
   );
 }
 
+// Payment Settings Page Component
+function PaymentSettingsPage({ navigate }) {
+  const { user } = useContext(AuthContext);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  const [formData, setFormData] = useState({
+    crypto_enabled: true,
+    stripe_enabled: false,
+    stripe_publishable_key: '',
+    stripe_secret_key: '',
+    paypal_enabled: false,
+    paypal_client_id: '',
+    paypal_client_secret: '',
+    cashapp_enabled: false,
+    cashapp_tag: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchPaymentSettings();
+    }
+  }, [user]);
+
+  const fetchPaymentSettings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/payment-settings/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+        setFormData({
+          crypto_enabled: data.crypto_enabled ?? true,
+          stripe_enabled: data.stripe_enabled ?? false,
+          stripe_publishable_key: data.stripe_publishable_key || '',
+          stripe_secret_key: data.stripe_secret_key || '',
+          paypal_enabled: data.paypal_enabled ?? false,
+          paypal_client_id: data.paypal_client_id || '',
+          paypal_client_secret: data.paypal_client_secret || '',
+          cashapp_enabled: data.cashapp_enabled ?? false,
+          cashapp_tag: data.cashapp_tag || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payment settings:', error);
+      setMessage({ type: 'error', text: 'Failed to load payment settings' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch(`${API_URL}/api/payment-settings/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      const data = await response.json();
+      setSettings(data);
+      setMessage({ type: 'success', text: 'Payment settings saved successfully!' });
+
+      // Refresh the form with updated data (to handle hidden keys)
+      await fetchPaymentSettings();
+    } catch (error) {
+      console.error('Error saving payment settings:', error);
+      setMessage({ type: 'error', text: 'Failed to save payment settings' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Please sign up or connect your wallet to access payment settings.</p>
+        <button onClick={() => navigate('signup')} style={{ marginTop: '20px', padding: '10px 20px' }}>
+          Go to Signup
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading payment settings...</div>;
+  }
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '900px', margin: '0 auto' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <h1>Payment Settings</h1>
+        <button
+          onClick={() => navigate('dashboard')}
+          style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+        >
+          ← Back to Dashboard
+        </button>
+      </header>
+
+      {message.text && (
+        <div style={{
+          padding: '12px 20px',
+          marginBottom: '30px',
+          backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: message.type === 'success' ? '#155724' : '#721c24',
+          borderRadius: '6px',
+          border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
+        }}>
+          {message.text}
+        </div>
+      )}
+
+      <p style={{ marginBottom: '30px', color: '#666', fontSize: '16px' }}>
+        Configure which payment methods you accept. Connect your own payment accounts to receive payments directly with zero platform fees.
+      </p>
+
+      {/* Crypto (USDC) */}
+      <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0' }}>💰 Crypto (USDC on Algorand)</h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Accept stable cryptocurrency donations</p>
+          </div>
+          <label style={{ position: 'relative', display: 'inline-block', width: '60px', height: '34px' }}>
+            <input
+              type="checkbox"
+              checked={formData.crypto_enabled}
+              onChange={(e) => setFormData({ ...formData, crypto_enabled: e.target.checked })}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute',
+              cursor: 'pointer',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: formData.crypto_enabled ? '#28a745' : '#ccc',
+              transition: '0.4s',
+              borderRadius: '34px'
+            }}>
+              <span style={{
+                position: 'absolute',
+                content: '',
+                height: '26px',
+                width: '26px',
+                left: formData.crypto_enabled ? '30px' : '4px',
+                bottom: '4px',
+                backgroundColor: 'white',
+                transition: '0.4s',
+                borderRadius: '50%'
+              }}></span>
+            </span>
+          </label>
+        </div>
+        <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+          <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
+            ✓ Always available since you have a connected wallet<br />
+            ✓ Instant, low-fee transactions on Algorand<br />
+            ✓ Payments go directly to your wallet: {user.wallet_address?.slice(0, 10)}...
+          </p>
+        </div>
+      </div>
+
+      {/* Stripe */}
+      <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0' }}>💳 Stripe (Credit Cards, Apple Pay, Google Pay)</h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Accept card payments and digital wallets</p>
+          </div>
+          <label style={{ position: 'relative', display: 'inline-block', width: '60px', height: '34px' }}>
+            <input
+              type="checkbox"
+              checked={formData.stripe_enabled}
+              onChange={(e) => setFormData({ ...formData, stripe_enabled: e.target.checked })}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute',
+              cursor: 'pointer',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: formData.stripe_enabled ? '#28a745' : '#ccc',
+              transition: '0.4s',
+              borderRadius: '34px'
+            }}>
+              <span style={{
+                position: 'absolute',
+                content: '',
+                height: '26px',
+                width: '26px',
+                left: formData.stripe_enabled ? '30px' : '4px',
+                bottom: '4px',
+                backgroundColor: 'white',
+                transition: '0.4s',
+                borderRadius: '50%'
+              }}></span>
+            </span>
+          </label>
+        </div>
+
+        {formData.stripe_enabled && (
+          <>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+                Publishable Key
+              </label>
+              <input
+                type="text"
+                value={formData.stripe_publishable_key}
+                onChange={(e) => setFormData({ ...formData, stripe_publishable_key: e.target.value })}
+                placeholder="pk_live_..."
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '14px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+                Secret Key
+              </label>
+              <input
+                type="password"
+                value={formData.stripe_secret_key}
+                onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
+                placeholder={formData.stripe_secret_key === '***hidden***' ? 'Key is set (enter new to change)' : 'sk_live_...'}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '14px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}
+              />
+            </div>
+            <div style={{ padding: '12px', backgroundColor: '#e7f3ff', borderRadius: '6px', fontSize: '13px', color: '#004085' }}>
+              <strong>How to get Stripe keys:</strong><br />
+              1. Create a Stripe account at <a href="https://stripe.com" target="_blank" rel="noopener noreferrer">stripe.com</a><br />
+              2. Go to Developers → API keys<br />
+              3. Copy your Publishable key and Secret key<br />
+              4. Payments go directly to your Stripe account
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* PayPal */}
+      <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0' }}>🅿️ PayPal</h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Accept PayPal payments</p>
+          </div>
+          <label style={{ position: 'relative', display: 'inline-block', width: '60px', height: '34px' }}>
+            <input
+              type="checkbox"
+              checked={formData.paypal_enabled}
+              onChange={(e) => setFormData({ ...formData, paypal_enabled: e.target.checked })}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute',
+              cursor: 'pointer',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: formData.paypal_enabled ? '#28a745' : '#ccc',
+              transition: '0.4s',
+              borderRadius: '34px'
+            }}>
+              <span style={{
+                position: 'absolute',
+                content: '',
+                height: '26px',
+                width: '26px',
+                left: formData.paypal_enabled ? '30px' : '4px',
+                bottom: '4px',
+                backgroundColor: 'white',
+                transition: '0.4s',
+                borderRadius: '50%'
+              }}></span>
+            </span>
+          </label>
+        </div>
+
+        {formData.paypal_enabled && (
+          <>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+                Client ID
+              </label>
+              <input
+                type="text"
+                value={formData.paypal_client_id}
+                onChange={(e) => setFormData({ ...formData, paypal_client_id: e.target.value })}
+                placeholder="AYourPayPalClientID..."
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '14px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+                Client Secret
+              </label>
+              <input
+                type="password"
+                value={formData.paypal_client_secret}
+                onChange={(e) => setFormData({ ...formData, paypal_client_secret: e.target.value })}
+                placeholder={formData.paypal_client_secret === '***hidden***' ? 'Secret is set (enter new to change)' : 'EYourPayPalSecret...'}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '14px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}
+              />
+            </div>
+            <div style={{ padding: '12px', backgroundColor: '#e7f3ff', borderRadius: '6px', fontSize: '13px', color: '#004085' }}>
+              <strong>How to get PayPal credentials:</strong><br />
+              1. Create a PayPal Business account<br />
+              2. Go to <a href="https://developer.paypal.com" target="_blank" rel="noopener noreferrer">developer.paypal.com</a><br />
+              3. Create a REST API app<br />
+              4. Copy your Client ID and Secret<br />
+              5. Payments go directly to your PayPal account
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Cash App */}
+      <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0' }}>💵 Cash App</h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Accept Cash App payments</p>
+          </div>
+          <label style={{ position: 'relative', display: 'inline-block', width: '60px', height: '34px' }}>
+            <input
+              type="checkbox"
+              checked={formData.cashapp_enabled}
+              onChange={(e) => setFormData({ ...formData, cashapp_enabled: e.target.checked })}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute',
+              cursor: 'pointer',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: formData.cashapp_enabled ? '#28a745' : '#ccc',
+              transition: '0.4s',
+              borderRadius: '34px'
+            }}>
+              <span style={{
+                position: 'absolute',
+                content: '',
+                height: '26px',
+                width: '26px',
+                left: formData.cashapp_enabled ? '30px' : '4px',
+                bottom: '4px',
+                backgroundColor: 'white',
+                transition: '0.4s',
+                borderRadius: '50%'
+              }}></span>
+            </span>
+          </label>
+        </div>
+
+        {formData.cashapp_enabled && (
+          <>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+                Cash App Tag (Cashtag)
+              </label>
+              <input
+                type="text"
+                value={formData.cashapp_tag}
+                onChange={(e) => setFormData({ ...formData, cashapp_tag: e.target.value })}
+                placeholder="$yourcashtag"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '14px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}
+              />
+            </div>
+            <div style={{ padding: '12px', backgroundColor: '#e7f3ff', borderRadius: '6px', fontSize: '13px', color: '#004085' }}>
+              <strong>How to use Cash App:</strong><br />
+              1. Download Cash App and create an account<br />
+              2. Set up your $Cashtag in the app<br />
+              3. Enter your $Cashtag above (e.g., $yourname)<br />
+              4. Supporters will be shown a link to pay you directly
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Save Button */}
+      <div style={{ textAlign: 'center', marginTop: '40px' }}>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            padding: '16px 48px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            backgroundColor: saving ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 12px rgba(0,123,255,0.3)'
+          }}
+        >
+          {saving ? 'Saving...' : 'Save Payment Settings'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Creator Page Component
 function CreatorPage({ username, navigate }) {
   const [creator, setCreator] = useState(null);
+  const [paymentSettings, setPaymentSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [donationAmount, setDonationAmount] = useState('');
   const [message, setMessage] = useState('');
   const [supporterName, setSupporterName] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('crypto');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [processing, setProcessing] = useState(false);
   const { accountAddress, connectWallet } = useContext(AuthContext);
 
@@ -487,6 +944,24 @@ function CreatorPage({ username, navigate }) {
       if (response.ok) {
         const data = await response.json();
         setCreator(data);
+
+        // Fetch payment settings for this creator
+        const settingsResponse = await fetch(`${API_URL}/api/payment-settings/${data.id}`);
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json();
+          setPaymentSettings(settingsData);
+
+          // Set default payment method to first enabled method
+          if (settingsData.crypto_enabled) {
+            setPaymentMethod('crypto');
+          } else if (settingsData.stripe_enabled) {
+            setPaymentMethod('stripe');
+          } else if (settingsData.paypal_enabled) {
+            setPaymentMethod('paypal');
+          } else if (settingsData.cashapp_enabled) {
+            setPaymentMethod('cashapp');
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching creator:', error);
@@ -506,8 +981,12 @@ function CreatorPage({ username, navigate }) {
     try {
       if (paymentMethod === 'crypto') {
         await handleCryptoDonation();
-      } else {
-        await handleCardDonation();
+      } else if (paymentMethod === 'stripe') {
+        await handleStripeDonation();
+      } else if (paymentMethod === 'paypal') {
+        await handlePayPalDonation();
+      } else if (paymentMethod === 'cashapp') {
+        await handleCashAppDonation();
       }
     } catch (error) {
       console.error('Donation error:', error);
@@ -566,8 +1045,41 @@ function CreatorPage({ username, navigate }) {
     setSupporterName('');
   };
 
-  const handleCardDonation = async () => {
-    alert('Card payments will be available soon!');
+  const handleStripeDonation = async () => {
+    alert('Stripe payment processing will be implemented next!');
+    // TODO: Implement Stripe payment using creator's keys
+  };
+
+  const handlePayPalDonation = async () => {
+    alert('PayPal payment processing will be implemented next!');
+    // TODO: Implement PayPal payment using creator's keys
+  };
+
+  const handleCashAppDonation = async () => {
+    if (paymentSettings?.cashapp_tag) {
+      // Open Cash App payment link
+      window.open(`https://cash.app/${paymentSettings.cashapp_tag.replace('$', '')}/${donationAmount}`, '_blank');
+
+      alert('Please complete your Cash App payment in the new window. Thank you for your support!');
+
+      // Optionally record the donation attempt
+      await fetch(`${API_URL}/api/donations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorId: creator.id,
+          amount: parseFloat(donationAmount),
+          supporterName,
+          message,
+          paymentMethod: 'cashapp',
+          status: 'pending'
+        })
+      });
+
+      setDonationAmount('');
+      setMessage('');
+      setSupporterName('');
+    }
   };
 
   if (loading) {
@@ -694,41 +1206,90 @@ function CreatorPage({ username, navigate }) {
             />
           </div>
 
-          {/* Payment Method Tabs */}
-          <div style={{ marginBottom: '20px', display: 'flex', borderBottom: '2px solid #e0e0e0' }}>
-            <button
-              onClick={() => setPaymentMethod('crypto')}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: 'transparent',
-                color: paymentMethod === 'crypto' ? '#FFDD00' : '#999',
-                border: 'none',
-                borderBottom: paymentMethod === 'crypto' ? '3px solid #FFDD00' : '3px solid transparent',
-                cursor: 'pointer',
-                fontWeight: paymentMethod === 'crypto' ? 'bold' : 'normal',
-                fontSize: '16px'
-              }}
-            >
-              💰 Crypto (USDC)
-            </button>
-            <button
-              onClick={() => setPaymentMethod('card')}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: 'transparent',
-                color: paymentMethod === 'card' ? '#FFDD00' : '#999',
-                border: 'none',
-                borderBottom: paymentMethod === 'card' ? '3px solid #FFDD00' : '3px solid transparent',
-                cursor: 'pointer',
-                fontWeight: paymentMethod === 'card' ? 'bold' : 'normal',
-                fontSize: '16px'
-              }}
-            >
-              💳 Credit Card
-            </button>
-          </div>
+          {/* Payment Method Tabs - Only show enabled methods */}
+          {paymentSettings && (
+            <div style={{ marginBottom: '20px' }}>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>Payment Methods:</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', borderBottom: '2px solid #e0e0e0' }}>
+                {paymentSettings.crypto_enabled && (
+                  <button
+                    onClick={() => setPaymentMethod('crypto')}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      padding: '12px',
+                      backgroundColor: 'transparent',
+                      color: paymentMethod === 'crypto' ? '#FFDD00' : '#999',
+                      border: 'none',
+                      borderBottom: paymentMethod === 'crypto' ? '3px solid #FFDD00' : '3px solid transparent',
+                      cursor: 'pointer',
+                      fontWeight: paymentMethod === 'crypto' ? 'bold' : 'normal',
+                      fontSize: '14px'
+                    }}
+                  >
+                    💰 Crypto
+                  </button>
+                )}
+                {paymentSettings.stripe_enabled && (
+                  <button
+                    onClick={() => setPaymentMethod('stripe')}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      padding: '12px',
+                      backgroundColor: 'transparent',
+                      color: paymentMethod === 'stripe' ? '#FFDD00' : '#999',
+                      border: 'none',
+                      borderBottom: paymentMethod === 'stripe' ? '3px solid #FFDD00' : '3px solid transparent',
+                      cursor: 'pointer',
+                      fontWeight: paymentMethod === 'stripe' ? 'bold' : 'normal',
+                      fontSize: '14px'
+                    }}
+                  >
+                    💳 Card
+                  </button>
+                )}
+                {paymentSettings.paypal_enabled && (
+                  <button
+                    onClick={() => setPaymentMethod('paypal')}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      padding: '12px',
+                      backgroundColor: 'transparent',
+                      color: paymentMethod === 'paypal' ? '#FFDD00' : '#999',
+                      border: 'none',
+                      borderBottom: paymentMethod === 'paypal' ? '3px solid #FFDD00' : '3px solid transparent',
+                      cursor: 'pointer',
+                      fontWeight: paymentMethod === 'paypal' ? 'bold' : 'normal',
+                      fontSize: '14px'
+                    }}
+                  >
+                    🅿️ PayPal
+                  </button>
+                )}
+                {paymentSettings.cashapp_enabled && (
+                  <button
+                    onClick={() => setPaymentMethod('cashapp')}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      padding: '12px',
+                      backgroundColor: 'transparent',
+                      color: paymentMethod === 'cashapp' ? '#FFDD00' : '#999',
+                      border: 'none',
+                      borderBottom: paymentMethod === 'cashapp' ? '3px solid #FFDD00' : '3px solid transparent',
+                      cursor: 'pointer',
+                      fontWeight: paymentMethod === 'cashapp' ? 'bold' : 'normal',
+                      fontSize: '14px'
+                    }}
+                  >
+                    💵 Cash App
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Donate Button */}
           <button
