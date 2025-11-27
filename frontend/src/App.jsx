@@ -53,7 +53,7 @@ function AuthProvider({ children }) {
 
   const fetchUserData = async (address) => {
     try {
-      const response = await fetch(\`\${API_URL}/api/creators/by-wallet/\${address}\`);
+      const response = await fetch(`${API_URL}/api/creators/by-wallet/${address}`);
       if (response.ok) {
         const data = await response.json();
         setUser(data);
@@ -94,11 +94,11 @@ function App() {
     setCreatorUsername(username);
     
     if (page === 'creator' && username) {
-      window.history.pushState({}, '', \`/@\${username}\`);
+      window.history.pushState({}, '', `/@${username}`);
     } else if (page === 'landing') {
       window.history.pushState({}, '', '/');
     } else {
-      window.history.pushState({}, '', \`/\${page}\`);
+      window.history.pushState({}, '', `/${page}`);
     }
   };
 
