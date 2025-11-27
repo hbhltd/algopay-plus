@@ -8,55 +8,64 @@ const supabase = createClient(
 );
 
 async function setupDatabase() {
-  console.log('🔄 Starting database setup...\n');
+  console.log('╔════════════════════════════════════════════════════╗');
+  console.log('║   🎯 SUPPORTLY DATABASE SETUP INSTRUCTIONS        ║');
+  console.log('╚════════════════════════════════════════════════════╝\n');
 
   try {
-    // Read the schema file
-    const schema = fs.readFileSync('./database/schema.sql', 'utf8');
+    // Test Supabase connection
+    console.log('🔍 Testing Supabase connection...');
+    const { data, error } = await supabase.from('creators').select('count').limit(1);
 
-    console.log('📋 Clearing old tables...');
-
-    // Drop all existing tables (in reverse order of dependencies)
-    const dropCommands = [
-      'DROP TABLE IF EXISTS analytics_events CASCADE;',
-      'DROP TABLE IF EXISTS email_preferences CASCADE;',
-      'DROP TABLE IF EXISTS content CASCADE;',
-      'DROP TABLE IF EXISTS subscriptions CASCADE;',
-      'DROP TABLE IF EXISTS nfts CASCADE;',
-      'DROP TABLE IF EXISTS nft_configs CASCADE;',
-      'DROP TABLE IF EXISTS donations CASCADE;',
-      'DROP TABLE IF EXISTS creators CASCADE;',
-      'DROP VIEW IF EXISTS creator_revenue_summary CASCADE;',
-      'DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;'
-    ];
-
-    for (const cmd of dropCommands) {
-      const { error } = await supabase.rpc('exec_sql', { sql: cmd }).catch(() => {
-        // Try direct query if RPC doesn't exist
-        return { error: null };
-      });
-      if (error && !error.message.includes('does not exist')) {
-        console.warn(`⚠️  ${error.message}`);
-      }
+    if (error && error.code === 'PGRST204') {
+      // Table doesn't exist yet - this is expected
+      console.log('✅ Connection successful (database is empty - ready for setup)\n');
+    } else if (error) {
+      console.log('⚠️  Connection warning:', error.message);
+      console.log('   (This is OK if the database is not set up yet)\n');
+    } else {
+      console.log('✅ Connection successful (database already has tables)\n');
     }
 
-    console.log('✅ Old tables cleared\n');
+    console.log('═══════════════════════════════════════════════════\n');
+    console.log('📋 COMPLETE DATABASE SETUP STEPS:\n');
+    console.log('1. Open Supabase Dashboard:');
+    console.log('   👉 https://supabase.com/dashboard\n');
 
-    console.log('📦 Applying new Supportly schema...');
-    console.log('⚠️  Note: Supabase client cannot execute full SQL files.');
-    console.log('📝 Please run the schema manually in Supabase SQL Editor:\n');
-    console.log('1. Go to https://supabase.com/dashboard');
-    console.log('2. Select your project');
-    console.log('3. Click "SQL Editor" in the left menu');
-    console.log('4. Click "New Query"');
-    console.log('5. Copy the contents of database/schema.sql');
-    console.log('6. Paste and click "Run"\n');
+    console.log('2. Select your project:');
+    console.log('   👉 jygcuixcfjsndutjpomu\n');
 
-    console.log('✅ Database setup instructions provided');
-    console.log('🎯 After running the schema, restart this script or start the backend\n');
+    console.log('3. Click "SQL Editor" in the left sidebar\n');
+
+    console.log('4. Click "New Query" button\n');
+
+    console.log('5. Open this file and copy ALL contents:');
+    console.log('   👉 database/reset-database.sql\n');
+
+    console.log('6. Paste the SQL into the editor\n');
+
+    console.log('7. Click "Run" (or press Cmd/Ctrl + Enter)\n');
+
+    console.log('8. Wait for completion message:\n');
+    console.log('   ✅ "Supportly database reset and setup completed successfully! 🎉"\n');
+
+    console.log('═══════════════════════════════════════════════════\n');
+    console.log('💡 TIPS:\n');
+    console.log('   • The script is safe to run multiple times');
+    console.log('   • It will clean up and recreate everything fresh');
+    console.log('   • All errors from old data will be handled automatically\n');
+
+    console.log('═══════════════════════════════════════════════════\n');
+    console.log('🚀 AFTER DATABASE SETUP:\n');
+    console.log('   Run: npm start\n');
+    console.log('   This will start the Supportly backend server\n');
 
   } catch (error) {
     console.error('❌ Error:', error.message);
+    console.log('\n💡 This might mean:');
+    console.log('   1. Supabase credentials are not set correctly');
+    console.log('   2. Check backend/.env file');
+    console.log('   3. Make sure SUPABASE_URL and SUPABASE_SERVICE_KEY are correct\n');
     process.exit(1);
   }
 }
