@@ -9,6 +9,7 @@
     "test": "node test-email.js"
   },
   "dependencies": {
+    "@paypal/paypal-server-sdk": "^2.0.0",
     "@sendgrid/mail": "^8.1.0",
     "@supabase/supabase-js": "^2.38.4",
     "algosdk": "^3.5.2",

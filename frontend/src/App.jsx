@@ -1051,8 +1051,84 @@ function CreatorPage({ username, navigate }) {
   };
 
   const handlePayPalDonation = async () => {
-    alert('PayPal payment processing will be implemented next!');
-    // TODO: Implement PayPal payment using creator's keys
+    try {
+      // Create PayPal order on backend
+      const orderResponse = await fetch(`${API_URL}/api/paypal/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorId: creator.id,
+          amount: parseFloat(donationAmount)
+        })
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error('Failed to create PayPal order');
+      }
+
+      const { orderID } = await orderResponse.json();
+
+      // Open PayPal approval window
+      const approvalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`;
+      const paypalWindow = window.open(approvalUrl, 'PayPal', 'width=500,height=600');
+
+      // Poll for window close or wait for user action
+      const checkWindowClosed = setInterval(async () => {
+        if (paypalWindow.closed) {
+          clearInterval(checkWindowClosed);
+
+          // User may have completed payment, try to capture
+          try {
+            const captureResponse = await fetch(`${API_URL}/api/paypal/capture-order`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                creatorId: creator.id,
+                orderID
+              })
+            });
+
+            if (captureResponse.ok) {
+              const captureData = await captureResponse.json();
+
+              // Record the donation
+              await fetch(`${API_URL}/api/donations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  creatorId: creator.id,
+                  amount: parseFloat(donationAmount),
+                  supporterName,
+                  message,
+                  paymentMethod: 'paypal',
+                  transactionHash: captureData.id
+                })
+              });
+
+              alert('PayPal donation successful! Thank you for your support!');
+              setDonationAmount('');
+              setMessage('');
+              setSupporterName('');
+            } else {
+              console.log('Payment not completed or cancelled');
+            }
+          } catch (error) {
+            console.error('Capture error:', error);
+          }
+        }
+      }, 1000);
+
+      // Stop checking after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkWindowClosed);
+        if (!paypalWindow.closed) {
+          paypalWindow.close();
+        }
+      }, 300000);
+    } catch (error) {
+      console.error('PayPal payment error:', error);
+      alert('PayPal payment failed: ' + error.message);
+    }
   };
 
   const handleCashAppDonation = async () => {

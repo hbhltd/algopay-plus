@@ -263,6 +263,125 @@ app.put('/api/payment-settings/:creatorId', async (req, res) => {
 });
 
 // =====================================================
+// PAYPAL PAYMENT ENDPOINTS
+// =====================================================
+
+const axios = require('axios');
+
+// Get PayPal access token using creator's credentials
+async function getPayPalAccessToken(clientId, clientSecret) {
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+  try {
+    const response = await axios.post(
+      'https://api-m.sandbox.paypal.com/v1/oauth2/token', // Use sandbox for now
+      'grant_type=client_credentials',
+      {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+    return response.data.access_token;
+  } catch (error) {
+    console.error('PayPal auth error:', error.response?.data || error.message);
+    throw new Error('Failed to authenticate with PayPal');
+  }
+}
+
+// Create PayPal order
+app.post('/api/paypal/create-order', async (req, res) => {
+  try {
+    const { creatorId, amount } = req.body;
+
+    // Get creator's PayPal credentials
+    const { data: settings } = await supabase
+      .from('payment_settings')
+      .select('paypal_client_id, paypal_client_secret')
+      .eq('creator_id', creatorId)
+      .single();
+
+    if (!settings || !settings.paypal_client_id || !settings.paypal_client_secret) {
+      return res.status(400).json({ error: 'PayPal not configured for this creator' });
+    }
+
+    // Get access token
+    const accessToken = await getPayPalAccessToken(
+      settings.paypal_client_id,
+      settings.paypal_client_secret
+    );
+
+    // Create order
+    const orderResponse = await axios.post(
+      'https://api-m.sandbox.paypal.com/v2/checkout/orders',
+      {
+        intent: 'CAPTURE',
+        purchase_units: [{
+          amount: {
+            currency_code: 'USD',
+            value: amount.toString()
+          },
+          description: 'Supportly Donation'
+        }]
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.json({ orderID: orderResponse.data.id });
+  } catch (error) {
+    console.error('PayPal create order error:', error.response?.data || error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Capture PayPal payment
+app.post('/api/paypal/capture-order', async (req, res) => {
+  try {
+    const { creatorId, orderID } = req.body;
+
+    // Get creator's PayPal credentials
+    const { data: settings } = await supabase
+      .from('payment_settings')
+      .select('paypal_client_id, paypal_client_secret')
+      .eq('creator_id', creatorId)
+      .single();
+
+    if (!settings || !settings.paypal_client_id || !settings.paypal_client_secret) {
+      return res.status(400).json({ error: 'PayPal not configured for this creator' });
+    }
+
+    // Get access token
+    const accessToken = await getPayPalAccessToken(
+      settings.paypal_client_id,
+      settings.paypal_client_secret
+    );
+
+    // Capture payment
+    const captureResponse = await axios.post(
+      `https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderID}/capture`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.json(captureResponse.data);
+  } catch (error) {
+    console.error('PayPal capture error:', error.response?.data || error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // DONATION ENDPOINTS
 // =====================================================
 
