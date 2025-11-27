@@ -930,6 +930,7 @@ function CreatorPage({ username, navigate }) {
   const [donationAmount, setDonationAmount] = useState('');
   const [message, setMessage] = useState('');
   const [supporterName, setSupporterName] = useState('');
+  const [supporterEmail, setSupporterEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [processing, setProcessing] = useState(false);
   const { accountAddress, connectWallet } = useContext(AuthContext);
@@ -1033,7 +1034,9 @@ function CreatorPage({ username, navigate }) {
         creatorId: creator.id,
         amount,
         transactionHash: txId,
-        supporterName,
+        donorName: supporterName,
+        donorEmail: supporterEmail,
+        donorWallet: senderAddress,
         message,
         paymentMethod: 'crypto'
       })
@@ -1043,6 +1046,7 @@ function CreatorPage({ username, navigate }) {
     setDonationAmount('');
     setMessage('');
     setSupporterName('');
+    setSupporterEmail('');
   };
 
   const handleStripeDonation = async () => {
@@ -1098,7 +1102,8 @@ function CreatorPage({ username, navigate }) {
                 body: JSON.stringify({
                   creatorId: creator.id,
                   amount: parseFloat(donationAmount),
-                  supporterName,
+                  donorName: supporterName,
+                  donorEmail: supporterEmail,
                   message,
                   paymentMethod: 'paypal',
                   transactionHash: captureData.id
@@ -1109,6 +1114,7 @@ function CreatorPage({ username, navigate }) {
               setDonationAmount('');
               setMessage('');
               setSupporterName('');
+              setSupporterEmail('');
             } else {
               console.log('Payment not completed or cancelled');
             }
@@ -1145,7 +1151,8 @@ function CreatorPage({ username, navigate }) {
         body: JSON.stringify({
           creatorId: creator.id,
           amount: parseFloat(donationAmount),
-          supporterName,
+          donorName: supporterName,
+          donorEmail: supporterEmail,
           message,
           paymentMethod: 'cashapp',
           status: 'pending'
@@ -1155,6 +1162,7 @@ function CreatorPage({ username, navigate }) {
       setDonationAmount('');
       setMessage('');
       setSupporterName('');
+      setSupporterEmail('');
     }
   };
 
@@ -1200,9 +1208,12 @@ function CreatorPage({ username, navigate }) {
 
         {/* Donation Widget - Buy Me A Coffee Style */}
         <div style={{ backgroundColor: '#fff', padding: '40px 30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-          <h2 style={{ marginBottom: '30px', textAlign: 'center', fontSize: '24px', color: '#333' }}>
+          <h2 style={{ marginBottom: '10px', textAlign: 'center', fontSize: '24px', color: '#333' }}>
             Buy {creator.display_name.split(' ')[0]} a coffee ☕
           </h2>
+          <p style={{ marginBottom: '30px', textAlign: 'center', fontSize: '14px', color: '#28a745', fontWeight: '500' }}>
+            ✓ No account required - Donate anonymously
+          </p>
 
           {/* Quick Amount Buttons */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -1251,7 +1262,25 @@ function CreatorPage({ username, navigate }) {
               type="text"
               value={supporterName}
               onChange={(e) => setSupporterName(e.target.value)}
-              placeholder="Name (optional)"
+              placeholder="Your name (optional)"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                borderRadius: '8px',
+                border: '2px solid #e0e0e0',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          {/* Email */}
+          <div style={{ marginBottom: '20px' }}>
+            <input
+              type="email"
+              value={supporterEmail}
+              onChange={(e) => setSupporterEmail(e.target.value)}
+              placeholder="Email for receipt (optional)"
               style={{
                 width: '100%',
                 padding: '14px',
