@@ -40,6 +40,11 @@ function AuthProvider({ children }) {
       await fetchUserData(accounts[0]);
       return accounts[0];
     } catch (error) {
+      // User closed the modal - this is normal, don't show scary error
+      if (error?.message?.includes('closed by user')) {
+        console.log('Wallet connection cancelled by user');
+        return null;
+      }
       console.error('Wallet connection error:', error);
       throw error;
     }
@@ -516,6 +521,10 @@ function CreatorPage({ username, navigate }) {
     let senderAddress = accountAddress;
     if (!senderAddress) {
       senderAddress = await connectWallet();
+      // User cancelled wallet connection
+      if (!senderAddress) {
+        return;
+      }
     }
 
     const amount = parseFloat(donationAmount);
