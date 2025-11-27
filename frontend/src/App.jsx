@@ -128,7 +128,7 @@ function LandingPage({ navigate }) {
   return (
     <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>AlgoPay Plus</h1>
+        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Supportly</h1>
         <p style={{ fontSize: '24px', color: '#666' }}>Accept crypto donations with ease on Algorand</p>
       </header>
 
@@ -729,7 +729,7 @@ function CreatorPage({ username, navigate }) {
         </div>
       </div>
 
-      {/* AlgoPay Plus Footer */}
+      {/* Supportly Footer */}
       <footer style={{
         backgroundColor: '#fff',
         borderTop: '1px solid #e0e0e0',
@@ -739,7 +739,7 @@ function CreatorPage({ username, navigate }) {
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#666' }}>
-            Powered by <strong style={{ color: '#333' }}>AlgoPay Plus</strong>
+            Powered by <strong style={{ color: '#333' }}>Supportly</strong>
           </p>
           <p style={{ margin: 0, fontSize: '12px', color: '#999' }}>
             Accept crypto donations on Algorand blockchain
