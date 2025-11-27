@@ -174,7 +174,8 @@ function SignupPage({ navigate }) {
     username: '',
     displayName: '',
     bio: '',
-    email: ''
+    email: '',
+    avatarUrl: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -194,7 +195,11 @@ function SignupPage({ navigate }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          username: formData.username,
+          displayName: formData.displayName,
+          bio: formData.bio,
+          email: formData.email,
+          avatarUrl: formData.avatarUrl,
           walletAddress
         })
       });
@@ -290,6 +295,20 @@ function SignupPage({ navigate }) {
               style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
               placeholder="your@email.com"
             />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Logo / Avatar URL (optional)
+            </label>
+            <input
+              type="url"
+              value={formData.avatarUrl}
+              onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
+              placeholder="https://example.com/your-logo.png"
+            />
+            <small style={{ color: '#666', fontSize: '14px' }}>Upload your logo to a service like imgur.com and paste the URL here</small>
           </div>
 
           {error && (
@@ -544,107 +563,189 @@ function CreatorPage({ username, navigate }) {
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '48px', marginBottom: '10px' }}>{creator.display_name}</h1>
-        <p style={{ fontSize: '20px', color: '#666' }}>@{creator.username}</p>
-        {creator.bio && <p style={{ marginTop: '20px', fontSize: '18px' }}>{creator.bio}</p>}
-      </div>
-
-      <div style={{ backgroundColor: '#f8f9fa', padding: '40px', borderRadius: '12px' }}>
-        <h2 style={{ marginBottom: '30px', textAlign: 'center' }}>Support {creator.display_name}</h2>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Amount (USDC)
-          </label>
-          <input
-            type="number"
-            value={donationAmount}
-            onChange={(e) => setDonationAmount(e.target.value)}
-            placeholder="10"
-            style={{ width: '100%', padding: '12px', fontSize: '18px', borderRadius: '6px', border: '1px solid #ddd' }}
-          />
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', display: 'flex', flexDirection: 'column' }}>
+      {/* Main Content */}
+      <div style={{ flex: 1, padding: '40px 20px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+        {/* Creator Profile */}
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          {creator.avatar_url && (
+            <img
+              src={creator.avatar_url}
+              alt={creator.display_name}
+              style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '4px solid #fff',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                marginBottom: '20px'
+              }}
+            />
+          )}
+          <h1 style={{ fontSize: '32px', marginBottom: '8px', color: '#333' }}>{creator.display_name}</h1>
+          {creator.bio && <p style={{ fontSize: '16px', color: '#666', maxWidth: '500px', margin: '0 auto' }}>{creator.bio}</p>}
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Your Name (optional)
-          </label>
-          <input
-            type="text"
-            value={supporterName}
-            onChange={(e) => setSupporterName(e.target.value)}
-            placeholder="Anonymous"
-            style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ddd' }}
-          />
-        </div>
+        {/* Donation Widget - Buy Me A Coffee Style */}
+        <div style={{ backgroundColor: '#fff', padding: '40px 30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <h2 style={{ marginBottom: '30px', textAlign: 'center', fontSize: '24px', color: '#333' }}>
+            Buy {creator.display_name.split(' ')[0]} a coffee ☕
+          </h2>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Message (optional)
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Say something nice..."
-            style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ddd', minHeight: '80px' }}
-          />
-        </div>
+          {/* Quick Amount Buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {[5, 10, 20].map(amount => (
+              <button
+                key={amount}
+                onClick={() => setDonationAmount(amount.toString())}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '16px',
+                  backgroundColor: donationAmount === amount.toString() ? '#FFDD00' : '#fff',
+                  color: '#333',
+                  border: '2px solid #FFDD00',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                ${amount}
+              </button>
+            ))}
+          </div>
 
-        <div style={{ marginBottom: '30px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Payment Method
-          </label>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          {/* Custom Amount */}
+          <div style={{ marginBottom: '20px' }}>
+            <input
+              type="number"
+              value={donationAmount}
+              onChange={(e) => setDonationAmount(e.target.value)}
+              placeholder="Custom amount"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '18px',
+                borderRadius: '8px',
+                border: '2px solid #e0e0e0',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          {/* Name */}
+          <div style={{ marginBottom: '20px' }}>
+            <input
+              type="text"
+              value={supporterName}
+              onChange={(e) => setSupporterName(e.target.value)}
+              placeholder="Name (optional)"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                borderRadius: '8px',
+                border: '2px solid #e0e0e0',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          {/* Message */}
+          <div style={{ marginBottom: '30px' }}>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Say something nice... (optional)"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                borderRadius: '8px',
+                border: '2px solid #e0e0e0',
+                outline: 'none',
+                minHeight: '100px',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          {/* Payment Method Tabs */}
+          <div style={{ marginBottom: '20px', display: 'flex', borderBottom: '2px solid #e0e0e0' }}>
             <button
               onClick={() => setPaymentMethod('crypto')}
               style={{
                 flex: 1,
                 padding: '12px',
-                backgroundColor: paymentMethod === 'crypto' ? '#007bff' : '#fff',
-                color: paymentMethod === 'crypto' ? '#fff' : '#000',
-                border: '1px solid #007bff',
-                borderRadius: '6px',
-                cursor: 'pointer'
+                backgroundColor: 'transparent',
+                color: paymentMethod === 'crypto' ? '#FFDD00' : '#999',
+                border: 'none',
+                borderBottom: paymentMethod === 'crypto' ? '3px solid #FFDD00' : '3px solid transparent',
+                cursor: 'pointer',
+                fontWeight: paymentMethod === 'crypto' ? 'bold' : 'normal',
+                fontSize: '16px'
               }}
             >
-              Crypto (USDC)
+              💰 Crypto (USDC)
             </button>
             <button
               onClick={() => setPaymentMethod('card')}
               style={{
                 flex: 1,
                 padding: '12px',
-                backgroundColor: paymentMethod === 'card' ? '#007bff' : '#fff',
-                color: paymentMethod === 'card' ? '#fff' : '#000',
-                border: '1px solid #007bff',
-                borderRadius: '6px',
-                cursor: 'pointer'
+                backgroundColor: 'transparent',
+                color: paymentMethod === 'card' ? '#FFDD00' : '#999',
+                border: 'none',
+                borderBottom: paymentMethod === 'card' ? '3px solid #FFDD00' : '3px solid transparent',
+                cursor: 'pointer',
+                fontWeight: paymentMethod === 'card' ? 'bold' : 'normal',
+                fontSize: '16px'
               }}
             >
-              Credit Card
+              💳 Credit Card
             </button>
           </div>
-        </div>
 
-        <button
-          onClick={handleDonate}
-          disabled={processing}
-          style={{
-            width: '100%',
-            padding: '16px',
-            fontSize: '20px',
-            backgroundColor: processing ? '#ccc' : '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: processing ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {processing ? 'Processing...' : `Donate $${donationAmount || '0'}`}
-        </button>
+          {/* Donate Button */}
+          <button
+            onClick={handleDonate}
+            disabled={processing || !donationAmount}
+            style={{
+              width: '100%',
+              padding: '18px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              backgroundColor: processing || !donationAmount ? '#ccc' : '#FFDD00',
+              color: '#000',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: processing || !donationAmount ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 12px rgba(255, 221, 0, 0.3)'
+            }}
+          >
+            {processing ? 'Processing...' : `Support with $${donationAmount || '0'}`}
+          </button>
+        </div>
       </div>
+
+      {/* AlgoPay Plus Footer */}
+      <footer style={{
+        backgroundColor: '#fff',
+        borderTop: '1px solid #e0e0e0',
+        padding: '20px',
+        textAlign: 'center',
+        marginTop: 'auto'
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#666' }}>
+            Powered by <strong style={{ color: '#333' }}>AlgoPay Plus</strong>
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', color: '#999' }}>
+            Accept crypto donations on Algorand blockchain
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
