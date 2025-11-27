@@ -390,12 +390,26 @@ function DashboardPage({ navigate }) {
           <h1>Dashboard</h1>
           <p style={{ color: '#666' }}>Welcome back, {user.display_name}!</p>
         </div>
-        <button
-          onClick={disconnectWallet}
-          style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-        >
-          Disconnect
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => navigate('landing')}
+            style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            🏠 Home
+          </button>
+          <button
+            onClick={() => navigate('creator', user.username)}
+            style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            👁️ View My Page
+          </button>
+          <button
+            onClick={disconnectWallet}
+            style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            Disconnect
+          </button>
+        </div>
       </header>
 
       <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
