@@ -1,4 +1,4 @@
-# 🧪 Testing Guide - AlgoPay Plus
+# 🧪 Testing Guide - Supportly
 
 **Everything is ready for testing!** Here's how to test the platform step-by-step.
 
@@ -41,7 +41,7 @@ npm run dev
 You should see:
 ```
 ╔════════════════════════════════════════╗
-║     🚀 AlgoPay Plus API Server        ║
+║     🚀 Supportly API Server           ║
 ║                                        ║
 ║  Server running on port 3001         ║
 ║  Environment: development              ║
@@ -93,7 +93,7 @@ Browser opens to: http://localhost:3000
 2. Sign up / Log in
 3. Click "New Project"
 4. Fill in:
-   - Name: algopay-plus
+   - Name: supportly
    - Password: (save this!)
    - Region: (closest to you)
 5. Wait ~2 minutes for initialization

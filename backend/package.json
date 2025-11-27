@@ -1,7 +1,7 @@
 {
-  "name": "algopay-plus-backend",
+  "name": "supportly-backend",
   "version": "1.0.0",
-  "description": "Algorand donation platform backend",
+  "description": "Supportly - Algorand donation platform backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

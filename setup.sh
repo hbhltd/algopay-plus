@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# AlgoPay Plus - Automated Setup Script
+# Supportly - Automated Setup Script
 # Run this after cloning the repo and everything will be ready!
 
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                                                              ║"
-echo "║          🚀 AlgoPay Plus - Automated Setup                  ║"
+echo "║          🚀 Supportly - Automated Setup                     ║"
 echo "║                                                              ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""

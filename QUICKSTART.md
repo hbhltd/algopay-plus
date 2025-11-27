@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide - AlgoPay Plus
+# 🚀 Quick Start Guide - Supportly
 
 **Get your donation platform running in 10 minutes!**
 
@@ -21,7 +21,7 @@ Before starting, make sure you have:
 2. Sign up or log in
 3. Click "New Project"
 4. Fill in:
-   - Name: `algopay-plus`
+   - Name: `supportly`
    - Database Password: (save this!)
    - Region: Choose closest to you
 5. Wait for project to initialize (~2 minutes)
@@ -162,7 +162,7 @@ npm run dev
 You should see:
 ```
 ╔════════════════════════════════════════╗
-║     🚀 AlgoPay Plus API Server        ║
+║     🚀 Supportly API Server           ║
 ║                                        ║
 ║  Server running on port 3001          ║
 ║  Environment: development              ║

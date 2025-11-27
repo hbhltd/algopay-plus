@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# AlgoPay Plus - Setup Test Script
+# Supportly - Setup Test Script
 # Tests that everything is configured correctly
 
-echo "🧪 AlgoPay Plus - Setup Verification"
-echo "======================================"
+echo "🧪 Supportly - Setup Verification"
+echo "=================================="
 echo ""
 
 # Color codes

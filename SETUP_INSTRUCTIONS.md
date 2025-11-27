@@ -1,4 +1,4 @@
-# 🚀 AlgoPay Plus - Setup Instructions
+# 🚀 Supportly - Setup Instructions
 
 **Get started in 3 commands!**
 
@@ -9,8 +9,8 @@
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/hbhltd/algopay-plus.git
-cd algopay-plus
+git clone <your-repo-url> supportly
+cd supportly
 ```
 
 ### Step 2: Run Automated Setup

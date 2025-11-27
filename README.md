@@ -1,4 +1,4 @@
-# 💜 AlgoPay Plus / Supportly
+# 💜 Supportly
 
 **A decentralized creator support platform built on Algorand blockchain**
 
@@ -40,8 +40,8 @@ Support creators with **zero platform fees**, reward supporters with **NFTs**, a
 ### 1. Clone & Install
 
 ```bash
-git clone <your-repo-url> algopay-plus
-cd algopay-plus
+git clone <your-repo-url> supportly
+cd supportly
 
 # Install backend dependencies
 cd backend
@@ -100,7 +100,7 @@ npm start
 ## 📁 Project Structure
 
 ```
-algopay-plus/
+supportly/
 ├── backend/
 │   ├── server.js              # Main Express server
 │   ├── email-notifications.js # Email system (5 templates)

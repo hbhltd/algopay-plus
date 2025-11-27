@@ -1,6 +1,6 @@
 # 🚀 START HERE - Quick Test Instructions
 
-**Your AlgoPay Plus platform is 100% ready to test!**
+**Your Supportly platform is 100% ready to test!**
 
 ---
 

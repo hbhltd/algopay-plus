@@ -1,4 +1,4 @@
-# 🎉 AlgoPay Plus - Project Setup Complete!
+# 🎉 Supportly - Project Setup Complete!
 
 **Date:** November 26, 2025
 **Status:** ✅ Ready for Local Development
@@ -50,7 +50,7 @@
 ## 📁 Project Structure
 
 ```
-algopay-plus/
+supportly/
 ├── backend/               ← Node.js API server
 │   ├── server.js         ← Main server (500+ lines)
 │   ├── email-notifications.js  ← Email system (650+ lines)

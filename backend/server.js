@@ -610,7 +610,7 @@ cron.schedule('0 9 * * 1', async () => {
 app.listen(PORT, () => {
   console.log(`
   ╔════════════════════════════════════════╗
-  ║     🚀 AlgoPay Plus API Server        ║
+  ║     🚀 Supportly API Server           ║
   ║                                        ║
   ║  Server running on port ${PORT}         ║
   ║  Environment: ${process.env.NODE_ENV || 'development'}              ║
