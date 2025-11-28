@@ -29,6 +29,10 @@ const { sendDonationNotification: sendDiscordDonationNotification } = require('.
 const zapierRoutes = require('./zapier-api');
 const { sendEventToZapier } = require('./zapier-service');
 
+// Import QuickBooks routes
+const quickbooksRoutes = require('./quickbooks-api');
+const { createSalesReceipt } = require('./quickbooks-service');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -47,6 +51,9 @@ app.use('/api/discord', discordRoutes);
 
 // Zapier routes
 app.use('/api/zapier', zapierRoutes);
+
+// QuickBooks routes
+app.use('/api/quickbooks', quickbooksRoutes);
 
 // Initialize services
 const supabase = createClient(
@@ -871,6 +878,16 @@ app.post('/api/donations', async (req, res) => {
     } catch (zapierError) {
       // Don't fail the donation if Zapier event fails
       console.error('Zapier event error:', zapierError);
+    }
+
+    // Sync to QuickBooks if enabled
+    try {
+      setImmediate(async () => {
+        await createSalesReceipt(creatorId, data);
+      });
+    } catch (quickbooksError) {
+      // Don't fail the donation if QuickBooks sync fails
+      console.error('QuickBooks sync error:', quickbooksError);
     }
 
     res.json(data);
