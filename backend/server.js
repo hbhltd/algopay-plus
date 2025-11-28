@@ -544,6 +544,576 @@ app.get('/api/analytics/export/json/:creatorId', async (req, res) => {
 });
 
 // =====================================================
+// SUBSCRIPTIONS ENDPOINTS
+// =====================================================
+
+// Create subscription
+app.post('/api/subscriptions/create', async (req, res) => {
+  try {
+    const { creatorId, tier, paymentMethod, paymentTxHash } = req.body;
+
+    // Validate tier
+    const validTiers = {
+      basic: { amount: 0, duration: 365 },
+      pro: { amount: 9.99, duration: 30 },
+      premium: { amount: 29.99, duration: 30 }
+    };
+
+    if (!validTiers[tier]) {
+      return res.status(400).json({ error: 'Invalid subscription tier' });
+    }
+
+    const tierConfig = validTiers[tier];
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + tierConfig.duration);
+
+    // Create subscription record
+    const { data: subscription, error: subError } = await supabase
+      .from('subscriptions')
+      .insert([{
+        creator_id: creatorId,
+        tier,
+        status: 'active',
+        amount: tierConfig.amount,
+        payment_tx_hash: paymentTxHash,
+        starts_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+        auto_renew: true
+      }])
+      .select()
+      .single();
+
+    if (subError) throw subError;
+
+    // Update creator's subscription info
+    await supabase
+      .from('creators')
+      .update({
+        subscription_tier: tier,
+        subscription_expires_at: expiresAt.toISOString()
+      })
+      .eq('id', creatorId);
+
+    res.json(subscription);
+  } catch (error) {
+    console.error('Subscription creation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get creator's subscription
+app.get('/api/subscriptions/:creatorId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('creator_id', req.params.creatorId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data || null);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check subscription status
+app.get('/api/subscriptions/check/:creatorId', async (req, res) => {
+  try {
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('subscription_tier, subscription_expires_at')
+      .eq('id', req.params.creatorId)
+      .single();
+
+    if (!creator) {
+      return res.status(404).json({ error: 'Creator not found' });
+    }
+
+    const isActive = creator.subscription_expires_at &&
+                     new Date(creator.subscription_expires_at) > new Date();
+
+    res.json({
+      tier: creator.subscription_tier || 'basic',
+      expiresAt: creator.subscription_expires_at,
+      isActive,
+      status: isActive ? 'active' : 'expired'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cancel subscription
+app.put('/api/subscriptions/:id/cancel', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update({
+        status: 'canceled',
+        auto_renew: false
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Renew subscription
+app.post('/api/subscriptions/:id/renew', async (req, res) => {
+  try {
+    const { paymentTxHash } = req.body;
+
+    // Get existing subscription
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('*, creators(id)')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Subscription not found' });
+    }
+
+    // Create new subscription period
+    const tierConfig = {
+      basic: { amount: 0, duration: 365 },
+      pro: { amount: 9.99, duration: 30 },
+      premium: { amount: 29.99, duration: 30 }
+    }[existing.tier];
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + tierConfig.duration);
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .insert([{
+        creator_id: existing.creator_id,
+        tier: existing.tier,
+        status: 'active',
+        amount: tierConfig.amount,
+        payment_tx_hash: paymentTxHash,
+        starts_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+        auto_renew: existing.auto_renew
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update creator
+    await supabase
+      .from('creators')
+      .update({
+        subscription_tier: existing.tier,
+        subscription_expires_at: expiresAt.toISOString()
+      })
+      .eq('id', existing.creator_id);
+
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all subscriptions for a creator (history)
+app.get('/api/subscriptions/history/:creatorId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('creator_id', req.params.creatorId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
+// CONTENT GATING ENDPOINTS
+// =====================================================
+
+// Upload/create content
+app.post('/api/content', async (req, res) => {
+  try {
+    const {
+      creatorId,
+      title,
+      description,
+      contentType,
+      contentUrl,
+      thumbnailUrl,
+      isGated,
+      requiredNftConfigId
+    } = req.body;
+
+    const { data, error } = await supabase
+      .from('content')
+      .insert([{
+        creator_id: creatorId,
+        title,
+        description,
+        content_type: contentType,
+        content_url: contentUrl,
+        thumbnail_url: thumbnailUrl,
+        is_gated: isGated || false,
+        required_nft_config_id: requiredNftConfigId
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('Content creation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all content for a creator
+app.get('/api/content/creator/:creatorId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('content')
+      .select(`
+        *,
+        nft_configs:required_nft_config_id(name, min_donation_amount)
+      `)
+      .eq('creator_id', req.params.creatorId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get specific content (with access check)
+app.get('/api/content/:id', async (req, res) => {
+  try {
+    const { walletAddress } = req.query;
+
+    // Get content
+    const { data: content, error: contentError } = await supabase
+      .from('content')
+      .select(`
+        *,
+        nft_configs:required_nft_config_id(name, min_donation_amount)
+      `)
+      .eq('id', req.params.id)
+      .single();
+
+    if (contentError) throw contentError;
+
+    // If not gated, return content
+    if (!content.is_gated) {
+      return res.json({ ...content, hasAccess: true });
+    }
+
+    // Check if user has required NFT
+    let hasAccess = false;
+    if (walletAddress && content.required_nft_config_id) {
+      const { data: nfts } = await supabase
+        .from('nfts')
+        .select('id')
+        .eq('config_id', content.required_nft_config_id)
+        .eq('owner_wallet', walletAddress)
+        .limit(1);
+
+      hasAccess = nfts && nfts.length > 0;
+    }
+
+    // Return content info (but maybe not the URL if no access)
+    const response = {
+      ...content,
+      hasAccess,
+      content_url: hasAccess ? content.content_url : null
+    };
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check user access to content
+app.get('/api/content/:id/access', async (req, res) => {
+  try {
+    const { walletAddress } = req.query;
+
+    if (!walletAddress) {
+      return res.json({ hasAccess: false, reason: 'No wallet address provided' });
+    }
+
+    // Get content
+    const { data: content } = await supabase
+      .from('content')
+      .select('is_gated, required_nft_config_id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    // If not gated, everyone has access
+    if (!content.is_gated) {
+      return res.json({ hasAccess: true, reason: 'Content is public' });
+    }
+
+    // Check NFT ownership
+    const { data: nfts } = await supabase
+      .from('nfts')
+      .select('id, token_id')
+      .eq('config_id', content.required_nft_config_id)
+      .eq('owner_wallet', walletAddress);
+
+    const hasAccess = nfts && nfts.length > 0;
+
+    res.json({
+      hasAccess,
+      reason: hasAccess ? 'User owns required NFT' : 'User does not own required NFT',
+      requiredNftConfigId: content.required_nft_config_id,
+      ownedNfts: nfts || []
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Increment view count
+app.post('/api/content/:id/view', async (req, res) => {
+  try {
+    // Get current views
+    const { data: content } = await supabase
+      .from('content')
+      .select('views')
+      .eq('id', req.params.id)
+      .single();
+
+    // Increment
+    const { data, error } = await supabase
+      .from('content')
+      .update({ views: (content?.views || 0) + 1 })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ views: data.views });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update content
+app.put('/api/content/:id', async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      contentUrl,
+      thumbnailUrl,
+      isGated,
+      requiredNftConfigId
+    } = req.body;
+
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (contentUrl !== undefined) updates.content_url = contentUrl;
+    if (thumbnailUrl !== undefined) updates.thumbnail_url = thumbnailUrl;
+    if (isGated !== undefined) updates.is_gated = isGated;
+    if (requiredNftConfigId !== undefined) updates.required_nft_config_id = requiredNftConfigId;
+
+    const { data, error } = await supabase
+      .from('content')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete content
+app.delete('/api/content/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('content')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Content deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
+// EMAIL PREFERENCES ENDPOINTS
+// =====================================================
+
+// Get email preferences
+app.get('/api/email-preferences/:creatorId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('email_preferences')
+      .select('*')
+      .eq('creator_id', req.params.creatorId)
+      .single();
+
+    // If no preferences exist, return defaults
+    if (error && error.code === 'PGRST116') {
+      return res.json({
+        creator_id: req.params.creatorId,
+        welcome_email: true,
+        donation_notifications: true,
+        weekly_reports: true,
+        marketing_emails: false
+      });
+    }
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update email preferences
+app.put('/api/email-preferences/:creatorId', async (req, res) => {
+  try {
+    const {
+      welcomeEmail,
+      donationNotifications,
+      weeklyReports,
+      marketingEmails
+    } = req.body;
+
+    // Try to update existing preferences
+    const { data: existing } = await supabase
+      .from('email_preferences')
+      .select('id')
+      .eq('creator_id', req.params.creatorId)
+      .single();
+
+    let data, error;
+
+    if (existing) {
+      // Update existing
+      const result = await supabase
+        .from('email_preferences')
+        .update({
+          welcome_email: welcomeEmail,
+          donation_notifications: donationNotifications,
+          weekly_reports: weeklyReports,
+          marketing_emails: marketingEmails
+        })
+        .eq('creator_id', req.params.creatorId)
+        .select()
+        .single();
+
+      data = result.data;
+      error = result.error;
+    } else {
+      // Create new
+      const result = await supabase
+        .from('email_preferences')
+        .insert([{
+          creator_id: req.params.creatorId,
+          welcome_email: welcomeEmail,
+          donation_notifications: donationNotifications,
+          weekly_reports: weeklyReports,
+          marketing_emails: marketingEmails
+        }])
+        .select()
+        .single();
+
+      data = result.data;
+      error = result.error;
+    }
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Unsubscribe from all emails
+app.post('/api/email-preferences/unsubscribe', async (req, res) => {
+  try {
+    const { creatorId } = req.body;
+
+    // Check if preferences exist
+    const { data: existing } = await supabase
+      .from('email_preferences')
+      .select('id')
+      .eq('creator_id', creatorId)
+      .single();
+
+    let data, error;
+
+    if (existing) {
+      // Update to unsubscribe all
+      const result = await supabase
+        .from('email_preferences')
+        .update({
+          welcome_email: false,
+          donation_notifications: false,
+          weekly_reports: false,
+          marketing_emails: false
+        })
+        .eq('creator_id', creatorId)
+        .select()
+        .single();
+
+      data = result.data;
+      error = result.error;
+    } else {
+      // Create with all disabled
+      const result = await supabase
+        .from('email_preferences')
+        .insert([{
+          creator_id: creatorId,
+          welcome_email: false,
+          donation_notifications: false,
+          weekly_reports: false,
+          marketing_emails: false
+        }])
+        .select()
+        .single();
+
+      data = result.data;
+      error = result.error;
+    }
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Unsubscribed from all emails', data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // EMAIL NOTIFICATION ENDPOINTS
 // =====================================================
 
