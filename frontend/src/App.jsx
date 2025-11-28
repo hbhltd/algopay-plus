@@ -95,6 +95,8 @@ function App() {
       setCurrentPage('donors');
     } else if (path === '/email-settings') {
       setCurrentPage('email-settings');
+    } else if (path === '/pricing') {
+      setCurrentPage('pricing');
     } else {
       setCurrentPage('landing');
     }
@@ -117,6 +119,7 @@ function App() {
     <AuthProvider>
       <div className="App">
         {currentPage === 'landing' && <LandingPage navigate={navigate} />}
+        {currentPage === 'pricing' && <PricingPage navigate={navigate} />}
         {currentPage === 'signup' && <SignupPage navigate={navigate} />}
         {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
         {currentPage === 'payment-settings' && <PaymentSettingsPage navigate={navigate} />}
@@ -198,6 +201,311 @@ function LandingPage({ navigate }) {
             <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>📧 Manage Your Community</h4>
             <p style={{ color: '#666' }}>Export donor data for taxes, send newsletters to your supporters</p>
           </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Pricing Page Component
+function PricingPage({ navigate }) {
+  const { user } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleStartFreeTrial = () => {
+    navigate('signup');
+  };
+
+  const handleUpgradeToPaid = async () => {
+    // If not logged in, redirect to signup
+    if (!user) {
+      navigate('signup');
+      return;
+    }
+
+    // Redirect to payment settings where they can subscribe
+    navigate('payment-settings');
+  };
+
+  return (
+    <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Header */}
+      <header style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <h1 style={{ fontSize: '48px', marginBottom: '20px', fontWeight: 'bold' }}>Supportly Pricing</h1>
+        <p style={{ fontSize: '24px', color: '#666', marginBottom: '10px' }}>
+          Simple, transparent pricing for creators
+        </p>
+        <p style={{ fontSize: '18px', color: '#888' }}>
+          No hidden fees. Cancel anytime.
+        </p>
+      </header>
+
+      {/* Platform Benefits */}
+      <section style={{ marginBottom: '60px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '32px', marginBottom: '30px' }}>Why Choose Supportly?</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px', marginTop: '40px' }}>
+          <div style={{ padding: '20px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '15px' }}>💰</div>
+            <h3 style={{ fontSize: '20px', marginBottom: '10px' }}>Zero Platform Fees</h3>
+            <p style={{ color: '#666' }}>Keep 100% of your donations. We don't take a cut.</p>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '15px' }}>🔒</div>
+            <h3 style={{ fontSize: '20px', marginBottom: '10px' }}>Multiple Payment Methods</h3>
+            <p style={{ color: '#666' }}>Accept PayPal, Stripe, Cash App, and Crypto (USDC)</p>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div>
+            <h3 style={{ fontSize: '20px', marginBottom: '10px' }}>Powerful Analytics</h3>
+            <p style={{ color: '#666' }}>Track donations, manage donors, export data for taxes</p>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '15px' }}>⚡</div>
+            <h3 style={{ fontSize: '20px', marginBottom: '10px' }}>Integrations</h3>
+            <p style={{ color: '#666' }}>Discord, Zapier, QuickBooks, Social Media & more</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Tiers */}
+      <section style={{ marginBottom: '60px' }}>
+        <h2 style={{ fontSize: '32px', marginBottom: '40px', textAlign: 'center' }}>Choose Your Plan</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '40px', maxWidth: '900px', margin: '0 auto' }}>
+
+          {/* Free Trial */}
+          <div style={{
+            border: '2px solid #e0e0e0',
+            borderRadius: '12px',
+            padding: '40px 30px',
+            backgroundColor: '#fafafa',
+            position: 'relative'
+          }}>
+            <h3 style={{ fontSize: '28px', marginBottom: '10px' }}>Free Trial</h3>
+            <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px' }}>
+              $0
+              <span style={{ fontSize: '18px', fontWeight: 'normal', color: '#666' }}>/month</span>
+            </div>
+            <p style={{ color: '#666', marginBottom: '30px' }}>Perfect for trying out Supportly</p>
+
+            <button
+              onClick={handleStartFreeTrial}
+              style={{
+                width: '100%',
+                padding: '15px 30px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginBottom: '30px'
+              }}
+            >
+              Start Free Trial
+            </button>
+
+            <div style={{ textAlign: 'left' }}>
+              <h4 style={{ fontSize: '16px', marginBottom: '15px', fontWeight: 'bold' }}>What's Included:</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#28a745', marginRight: '10px', fontSize: '18px' }}>✓</span>
+                  Crypto (USDC) payments only
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#28a745', marginRight: '10px', fontSize: '18px' }}>✓</span>
+                  Up to 10 donations/month
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#28a745', marginRight: '10px', fontSize: '18px' }}>✓</span>
+                  Basic analytics
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#28a745', marginRight: '10px', fontSize: '18px' }}>✓</span>
+                  Email notifications
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#28a745', marginRight: '10px', fontSize: '18px' }}>✓</span>
+                  Community support
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Paid Tier */}
+          <div style={{
+            border: '3px solid #007bff',
+            borderRadius: '12px',
+            padding: '40px 30px',
+            backgroundColor: 'white',
+            position: 'relative',
+            boxShadow: '0 10px 30px rgba(0,123,255,0.2)'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '-15px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: '#007bff',
+              color: 'white',
+              padding: '5px 20px',
+              borderRadius: '20px',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              MOST POPULAR
+            </div>
+
+            <h3 style={{ fontSize: '28px', marginBottom: '10px' }}>Supportly Creator</h3>
+            <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px' }}>
+              $24.95
+              <span style={{ fontSize: '18px', fontWeight: 'normal', color: '#666' }}>/year</span>
+            </div>
+            <p style={{ color: '#666', marginBottom: '30px' }}>Everything you need - ALL features unlocked!</p>
+
+            <button
+              onClick={handleUpgradeToPaid}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '15px 30px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                marginBottom: '30px',
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              {loading ? 'Processing...' : 'Upgrade to Paid'}
+            </button>
+
+            {error && (
+              <div style={{
+                padding: '10px',
+                backgroundColor: '#f8d7da',
+                color: '#721c24',
+                borderRadius: '6px',
+                marginBottom: '20px',
+                fontSize: '14px'
+              }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ textAlign: 'left' }}>
+              <h4 style={{ fontSize: '16px', marginBottom: '15px', fontWeight: 'bold' }}>Everything in Free, plus:</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  <strong>All payment methods:</strong> Stripe, PayPal, Cash App, Crypto
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Unlimited donations
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  NFT rewards for supporters
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Advanced analytics & reporting
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Unlimited webhooks & email campaigns
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Discord & Zapier integrations
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  QuickBooks & Social Media sync
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Digital product sales & content gating
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Custom branding & domain support
+                </li>
+                <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ color: '#007bff', marginRight: '10px', fontSize: '18px', fontWeight: 'bold' }}>✓</span>
+                  Email support & unlimited data retention
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ / Additional Info */}
+      <section style={{ textAlign: 'center', marginBottom: '40px', padding: '40px 20px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
+        <h2 style={{ fontSize: '28px', marginBottom: '20px' }}>Frequently Asked Questions</h2>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>Can I cancel anytime?</h3>
+            <p style={{ color: '#666' }}>Yes! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period.</p>
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>Are there really no platform fees?</h3>
+            <p style={{ color: '#666' }}>Absolutely! Unlike other platforms that take 5-10% of every donation, we charge a simple annual subscription. You keep 100% of what your supporters give you.</p>
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>What payment methods do you support?</h3>
+            <p style={{ color: '#666' }}>Free tier supports crypto (USDC). Paid tier includes Stripe (credit cards, Apple Pay, Google Pay), PayPal, Cash App, and crypto (USDC).</p>
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>How do automatic renewals work?</h3>
+            <p style={{ color: '#666' }}>Your subscription automatically renews each year via Stripe. We'll send you reminder emails 30, 7, and 1 day before renewal. You can turn off auto-renewal anytime.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <h2 style={{ fontSize: '32px', marginBottom: '20px' }}>Ready to get started?</h2>
+        <p style={{ fontSize: '18px', color: '#666', marginBottom: '30px' }}>
+          Join thousands of creators already using Supportly
+        </p>
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleStartFreeTrial}
+            style={{
+              padding: '15px 40px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Start Free Trial
+          </button>
+          <button
+            onClick={() => navigate('landing')}
+            style={{
+              padding: '15px 40px',
+              backgroundColor: 'white',
+              color: '#007bff',
+              border: '2px solid #007bff',
+              borderRadius: '8px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Learn More
+          </button>
         </div>
       </section>
     </div>
