@@ -706,57 +706,304 @@ app.put('/api/email-settings/:creatorId', async (req, res) => {
 // NEWSLETTER ENDPOINTS
 // =====================================================
 
-// Send newsletter to donors
-app.post('/api/newsletter/send', async (req, res) => {
+// Create newsletter (draft)
+app.post('/api/newsletters', async (req, res) => {
   try {
-    const { creatorId, subject, message, recipients } = req.body;
+    const { creatorId, subject, contentHtml, contentText, previewText, sendTo } = req.body;
 
-    if (!recipients || recipients.length === 0) {
-      return res.status(400).json({ error: 'No recipients specified' });
+    if (!subject || !contentHtml) {
+      return res.status(400).json({ error: 'Subject and content are required' });
+    }
+
+    const { data, error } = await supabase
+      .from('newsletters')
+      .insert([{
+        creator_id: creatorId,
+        subject,
+        content_html: contentHtml,
+        content_text: contentText || contentHtml.replace(/<[^>]*>/g, ''), // Strip HTML if no text version
+        preview_text: previewText,
+        send_to: sendTo || 'all',
+        status: 'draft'
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({ newsletter: data });
+  } catch (error) {
+    console.error('Create newsletter error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all newsletters for a creator
+app.get('/api/newsletters/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    const { data, error } = await supabase
+      .from('newsletters')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ newsletters: data });
+  } catch (error) {
+    console.error('Get newsletters error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single newsletter with stats
+app.get('/api/newsletters/:creatorId/:newsletterId', async (req, res) => {
+  try {
+    const { creatorId, newsletterId } = req.params;
+
+    const { data, error } = await supabase
+      .from('newsletters')
+      .select('*')
+      .eq('id', newsletterId)
+      .eq('creator_id', creatorId)
+      .single();
+
+    if (error) throw error;
+
+    res.json({ newsletter: data });
+  } catch (error) {
+    console.error('Get newsletter error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update newsletter
+app.put('/api/newsletters/:newsletterId', async (req, res) => {
+  try {
+    const { newsletterId } = req.params;
+    const { subject, contentHtml, contentText, previewText, sendTo } = req.body;
+
+    const { data, error } = await supabase
+      .from('newsletters')
+      .update({
+        subject,
+        content_html: contentHtml,
+        content_text: contentText,
+        preview_text: previewText,
+        send_to: sendTo,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', newsletterId)
+      .eq('status', 'draft') // Only allow editing drafts
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ newsletter: data });
+  } catch (error) {
+    console.error('Update newsletter error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send newsletter
+app.post('/api/newsletters/:newsletterId/send', async (req, res) => {
+  try {
+    const { newsletterId } = req.params;
+
+    // Get newsletter
+    const { data: newsletter, error: newsletterError } = await supabase
+      .from('newsletters')
+      .select('*')
+      .eq('id', newsletterId)
+      .single();
+
+    if (newsletterError) throw newsletterError;
+
+    if (newsletter.status !== 'draft' && newsletter.status !== 'scheduled') {
+      return res.status(400).json({ error: 'Newsletter has already been sent or is in progress' });
     }
 
     // Get creator info
     const { data: creator } = await supabase
       .from('creators')
       .select('display_name, email')
-      .eq('id', creatorId)
+      .eq('id', newsletter.creator_id)
       .single();
 
-    if (!creator) {
-      return res.status(404).json({ error: 'Creator not found' });
+    // Get subscribers based on send_to criteria
+    let subscriberQuery = supabase
+      .from('community_subscribers')
+      .select('*')
+      .eq('creator_id', newsletter.creator_id)
+      .eq('is_active', true);
+
+    if (newsletter.send_to === 'verified_only') {
+      subscriberQuery = subscriberQuery.eq('email_verified', true);
     }
 
-    // Send email to each recipient
+    const { data: subscribers, error: subscribersError } = await subscriberQuery;
+
+    if (subscribersError) throw subscribersError;
+
+    if (!subscribers || subscribers.length === 0) {
+      return res.status(400).json({ error: 'No subscribers found' });
+    }
+
+    // Update newsletter status
+    await supabase
+      .from('newsletters')
+      .update({
+        status: 'sending',
+        total_recipients: subscribers.length,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', newsletterId);
+
+    // Create recipient records
+    const recipients = subscribers.map(sub => ({
+      newsletter_id: newsletterId,
+      subscriber_id: sub.id,
+      recipient_email: sub.email,
+      recipient_name: sub.name,
+      status: 'pending'
+    }));
+
+    const { error: recipientsError } = await supabase
+      .from('newsletter_recipients')
+      .insert(recipients);
+
+    if (recipientsError) throw recipientsError;
+
+    // Send emails (in background - should use a queue in production)
     const fromEmail = creator.email || process.env.FROM_EMAIL || 'noreply@supportly.com';
     const fromName = creator.display_name || 'Supportly Creator';
 
-    // For now, we'll use Supportly's email service
-    // Later this will use the creator's configured email service
-    for (const recipientEmail of recipients) {
-      await sendEmail({
-        to: recipientEmail,
-        from: fromEmail,
-        fromName: fromName,
-        subject: subject,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Message from ${creator.display_name}</h2>
-            <div style="white-space: pre-wrap; line-height: 1.6;">
-              ${message.replace(/\n/g, '<br>')}
-            </div>
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            <p style="color: #999; font-size: 12px;">
-              You received this email because you are a supporter of ${creator.display_name} on Supportly.
-            </p>
-          </div>
-        `,
-        text: message
-      });
+    // Send in batches to avoid overwhelming the email service
+    let sentCount = 0;
+    for (const subscriber of subscribers) {
+      try {
+        // Replace template variables
+        let personalizedHtml = newsletter.content_html
+          .replace(/\{\{subscriber_name\}\}/g, subscriber.name || 'there')
+          .replace(/\{\{creator_name\}\}/g, creator.display_name)
+          .replace(/\{\{unsubscribe_link\}\}/g, `${process.env.FRONTEND_URL}/unsubscribe?email=${subscriber.email}&creator=${newsletter.creator_id}`);
+
+        await sendEmail({
+          to: subscriber.email,
+          from: fromEmail,
+          fromName: fromName,
+          subject: newsletter.subject,
+          html: personalizedHtml,
+          text: newsletter.content_text || newsletter.content_html.replace(/<[^>]*>/g, '')
+        });
+
+        // Update recipient status
+        await supabase
+          .from('newsletter_recipients')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString()
+          })
+          .eq('newsletter_id', newsletterId)
+          .eq('subscriber_id', subscriber.id);
+
+        sentCount++;
+      } catch (emailError) {
+        console.error(`Failed to send to ${subscriber.email}:`, emailError);
+
+        // Mark as failed
+        await supabase
+          .from('newsletter_recipients')
+          .update({
+            status: 'failed',
+            error_message: emailError.message
+          })
+          .eq('newsletter_id', newsletterId)
+          .eq('subscriber_id', subscriber.id);
+      }
     }
 
-    res.json({ success: true, sent: recipients.length });
+    // Update newsletter status
+    await supabase
+      .from('newsletters')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        total_sent: sentCount,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', newsletterId);
+
+    res.json({
+      success: true,
+      newsletterId,
+      totalRecipients: subscribers.length,
+      sent: sentCount
+    });
   } catch (error) {
-    console.error('Newsletter send error:', error);
+    console.error('Send newsletter error:', error);
+
+    // Update newsletter status to failed
+    await supabase
+      .from('newsletters')
+      .update({
+        status: 'failed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.params.newsletterId);
+
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete newsletter (draft only)
+app.delete('/api/newsletters/:newsletterId', async (req, res) => {
+  try {
+    const { newsletterId } = req.params;
+
+    const { data, error } = await supabase
+      .from('newsletters')
+      .delete()
+      .eq('id', newsletterId)
+      .eq('status', 'draft')
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Newsletter not found or cannot be deleted' });
+      }
+      throw error;
+    }
+
+    res.json({ message: 'Newsletter deleted', newsletter: data });
+  } catch (error) {
+    console.error('Delete newsletter error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get newsletter templates
+app.get('/api/newsletter-templates/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    const { data, error } = await supabase
+      .from('newsletter_templates')
+      .select('*')
+      .or(`creator_id.eq.${creatorId},creator_id.is.null`) // Get creator's templates and global templates
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ templates: data });
+  } catch (error) {
+    console.error('Get templates error:', error);
     res.status(500).json({ error: error.message });
   }
 });
