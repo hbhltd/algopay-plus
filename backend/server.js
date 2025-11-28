@@ -382,6 +382,65 @@ app.post('/api/paypal/capture-order', async (req, res) => {
 });
 
 // =====================================================
+// NEWSLETTER ENDPOINTS
+// =====================================================
+
+// Send newsletter to donors
+app.post('/api/newsletter/send', async (req, res) => {
+  try {
+    const { creatorId, subject, message, recipients } = req.body;
+
+    if (!recipients || recipients.length === 0) {
+      return res.status(400).json({ error: 'No recipients specified' });
+    }
+
+    // Get creator info
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('display_name, email')
+      .eq('id', creatorId)
+      .single();
+
+    if (!creator) {
+      return res.status(404).json({ error: 'Creator not found' });
+    }
+
+    // Send email to each recipient
+    const fromEmail = creator.email || process.env.FROM_EMAIL || 'noreply@supportly.com';
+    const fromName = creator.display_name || 'Supportly Creator';
+
+    // For now, we'll use Supportly's email service
+    // Later this will use the creator's configured email service
+    for (const recipientEmail of recipients) {
+      await sendEmail({
+        to: recipientEmail,
+        from: fromEmail,
+        fromName: fromName,
+        subject: subject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Message from ${creator.display_name}</h2>
+            <div style="white-space: pre-wrap; line-height: 1.6;">
+              ${message.replace(/\n/g, '<br>')}
+            </div>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 12px;">
+              You received this email because you are a supporter of ${creator.display_name} on Supportly.
+            </p>
+          </div>
+        `,
+        text: message
+      });
+    }
+
+    res.json({ success: true, sent: recipients.length });
+  } catch (error) {
+    console.error('Newsletter send error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // DONATION ENDPOINTS
 // =====================================================
 

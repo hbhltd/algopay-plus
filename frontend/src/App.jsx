@@ -91,6 +91,8 @@ function App() {
       setCurrentPage('dashboard');
     } else if (path === '/payment-settings') {
       setCurrentPage('payment-settings');
+    } else if (path === '/donors') {
+      setCurrentPage('donors');
     } else {
       setCurrentPage('landing');
     }
@@ -116,6 +118,7 @@ function App() {
         {currentPage === 'signup' && <SignupPage navigate={navigate} />}
         {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
         {currentPage === 'payment-settings' && <PaymentSettingsPage navigate={navigate} />}
+        {currentPage === 'donors' && <DonorsPage navigate={navigate} />}
         {currentPage === 'creator' && <CreatorPage username={creatorUsername} navigate={navigate} />}
       </div>
     </AuthProvider>
@@ -410,6 +413,12 @@ function DashboardPage({ navigate }) {
             style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
           >
             👁️ View My Page
+          </button>
+          <button
+            onClick={() => navigate('donors')}
+            style={{ padding: '10px 20px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            👥 Donors
           </button>
           <button
             onClick={() => navigate('payment-settings')}
@@ -917,6 +926,386 @@ function PaymentSettingsPage({ navigate }) {
         >
           {saving ? 'Saving...' : 'Save Payment Settings'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Donors Page Component
+function DonorsPage({ navigate }) {
+  const { user } = useContext(AuthContext);
+  const [donors, setDonors] = useState([]);
+  const [donations, setDonations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    if (user) {
+      fetchDonors();
+    }
+  }, [user]);
+
+  const fetchDonors = async () => {
+    try {
+      // Fetch all donations for this creator
+      const response = await fetch(`${API_URL}/api/donations/creator/${user.id}`);
+      if (response.ok) {
+        const allDonations = await response.json();
+        setDonations(allDonations);
+
+        // Group by donor email to create donor list
+        const donorMap = {};
+        allDonations.forEach(donation => {
+          const email = donation.donor_email || 'anonymous';
+          const name = donation.donor_name || 'Anonymous';
+
+          if (!donorMap[email]) {
+            donorMap[email] = {
+              email: email,
+              name: name,
+              totalDonated: 0,
+              donationCount: 0,
+              firstDonation: donation.created_at,
+              lastDonation: donation.created_at,
+              paymentMethods: new Set()
+            };
+          }
+
+          donorMap[email].totalDonated += parseFloat(donation.amount);
+          donorMap[email].donationCount += 1;
+          donorMap[email].paymentMethods.add(donation.payment_method);
+
+          // Update last donation date
+          if (new Date(donation.created_at) > new Date(donorMap[email].lastDonation)) {
+            donorMap[email].lastDonation = donation.created_at;
+          }
+        });
+
+        // Convert to array and sort by total donated
+        const donorList = Object.values(donorMap)
+          .map(d => ({
+            ...d,
+            paymentMethods: Array.from(d.paymentMethods)
+          }))
+          .sort((a, b) => b.totalDonated - a.totalDonated);
+
+        setDonors(donorList);
+      }
+    } catch (error) {
+      console.error('Error fetching donors:', error);
+      setMessage({ type: 'error', text: 'Failed to load donors' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    // Create CSV header
+    let csv = 'Donor Name,Email,Total Donated,Number of Donations,First Donation,Last Donation,Payment Methods\n';
+
+    // Add donor rows
+    donors.forEach(donor => {
+      csv += `"${donor.name}","${donor.email}","$${donor.totalDonated.toFixed(2)}",${donor.donationCount},"${new Date(donor.firstDonation).toLocaleDateString()}","${new Date(donor.lastDonation).toLocaleDateString()}","${donor.paymentMethods.join(', ')}"\n`;
+    });
+
+    // Add all donations section
+    csv += '\n\nAll Donations\n';
+    csv += 'Date,Donor Name,Email,Amount,Payment Method,Message\n';
+    donations.forEach(donation => {
+      const date = new Date(donation.created_at).toLocaleDateString();
+      const name = donation.donor_name || 'Anonymous';
+      const email = donation.donor_email || '';
+      const message = (donation.message || '').replace(/"/g, '""');
+      csv += `"${date}","${name}","${email}","$${parseFloat(donation.amount).toFixed(2)}","${donation.payment_method}","${message}"\n`;
+    });
+
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `supportly-donors-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const sendNewsletter = async () => {
+    if (!emailSubject || !emailMessage) {
+      setMessage({ type: 'error', text: 'Please fill in subject and message' });
+      return;
+    }
+
+    setSending(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // Get all donor emails (exclude anonymous)
+      const recipientEmails = donors
+        .filter(d => d.email !== 'anonymous' && d.email)
+        .map(d => d.email);
+
+      if (recipientEmails.length === 0) {
+        setMessage({ type: 'error', text: 'No donors with email addresses to send to' });
+        setSending(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/newsletter/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorId: user.id,
+          subject: emailSubject,
+          message: emailMessage,
+          recipients: recipientEmails
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send newsletter');
+      }
+
+      setMessage({ type: 'success', text: `Newsletter sent to ${recipientEmails.length} donors!` });
+      setEmailSubject('');
+      setEmailMessage('');
+      setShowEmailComposer(false);
+    } catch (error) {
+      console.error('Error sending newsletter:', error);
+      setMessage({ type: 'error', text: 'Failed to send newsletter' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Please sign up or connect your wallet to access donors.</p>
+        <button onClick={() => navigate('signup')} style={{ marginTop: '20px', padding: '10px 20px' }}>
+          Go to Signup
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading donors...</div>;
+  }
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <div>
+          <h1>Donor Management</h1>
+          <p style={{ color: '#666', margin: '10px 0 0 0' }}>Track and manage your supporters</p>
+        </div>
+        <button
+          onClick={() => navigate('dashboard')}
+          style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+        >
+          ← Back to Dashboard
+        </button>
+      </header>
+
+      {message.text && (
+        <div style={{
+          padding: '12px 20px',
+          marginBottom: '30px',
+          backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: message.type === 'success' ? '#155724' : '#721c24',
+          borderRadius: '6px',
+          border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
+        }}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Summary Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '40px' }}>
+        <div style={{ padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '36px', color: '#17a2b8', margin: '0 0 10px 0' }}>{donors.length}</h3>
+          <p style={{ color: '#666', margin: 0 }}>Total Donors</p>
+        </div>
+        <div style={{ padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '36px', color: '#28a745', margin: '0 0 10px 0' }}>
+            ${donors.reduce((sum, d) => sum + d.totalDonated, 0).toFixed(2)}
+          </h3>
+          <p style={{ color: '#666', margin: 0 }}>Total Raised</p>
+        </div>
+        <div style={{ padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '36px', color: '#007bff', margin: '0 0 10px 0' }}>
+            {donors.filter(d => d.email !== 'anonymous').length}
+          </h3>
+          <p style={{ color: '#666', margin: 0 }}>With Email</p>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{ marginBottom: '30px', display: 'flex', gap: '15px' }}>
+        <button
+          onClick={exportToCSV}
+          disabled={donors.length === 0}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: donors.length === 0 ? '#ccc' : '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: donors.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          📊 Export to CSV (Tax Report)
+        </button>
+        <button
+          onClick={() => setShowEmailComposer(!showEmailComposer)}
+          disabled={donors.filter(d => d.email !== 'anonymous').length === 0}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: donors.filter(d => d.email !== 'anonymous').length === 0 ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: donors.filter(d => d.email !== 'anonymous').length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          ✉️ Send Newsletter
+        </button>
+      </div>
+
+      {/* Email Composer */}
+      {showEmailComposer && (
+        <div style={{ marginBottom: '40px', padding: '30px', backgroundColor: '#fff', border: '2px solid #007bff', borderRadius: '8px' }}>
+          <h2 style={{ marginBottom: '20px' }}>Compose Newsletter</h2>
+          <p style={{ marginBottom: '20px', color: '#666' }}>
+            Send an email to all {donors.filter(d => d.email !== 'anonymous').length} donors with email addresses
+          </p>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Subject</label>
+            <input
+              type="text"
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              placeholder="Newsletter subject..."
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Message</label>
+            <textarea
+              value={emailMessage}
+              onChange={(e) => setEmailMessage(e.target.value)}
+              placeholder="Your message to supporters..."
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                minHeight: '200px',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={sendNewsletter}
+              disabled={sending}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: sending ? '#ccc' : '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: sending ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold'
+              }}
+            >
+              {sending ? 'Sending...' : 'Send Newsletter'}
+            </button>
+            <button
+              onClick={() => setShowEmailComposer(false)}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Donors Table */}
+      <div style={{ backgroundColor: '#fff', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd' }}>
+        <h2 style={{ padding: '20px', margin: 0, borderBottom: '1px solid #ddd' }}>Your Donors</h2>
+
+        {donors.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+            <p>No donors yet. Share your page to start receiving support!</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ backgroundColor: '#f8f9fa' }}>
+                <tr>
+                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Donor</th>
+                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Email</th>
+                  <th style={{ padding: '15px', textAlign: 'right', borderBottom: '2px solid #ddd' }}>Total Donated</th>
+                  <th style={{ padding: '15px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Donations</th>
+                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>First Donation</th>
+                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Last Donation</th>
+                  <th style={{ padding: '15px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Payment Methods</th>
+                </tr>
+              </thead>
+              <tbody>
+                {donors.map((donor, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '15px' }}>{donor.name}</td>
+                    <td style={{ padding: '15px', color: donor.email === 'anonymous' ? '#999' : '#333' }}>
+                      {donor.email === 'anonymous' ? 'Anonymous' : donor.email}
+                    </td>
+                    <td style={{ padding: '15px', textAlign: 'right', fontWeight: 'bold', color: '#28a745' }}>
+                      ${donor.totalDonated.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '15px', textAlign: 'center' }}>{donor.donationCount}</td>
+                    <td style={{ padding: '15px', fontSize: '14px', color: '#666' }}>
+                      {new Date(donor.firstDonation).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '15px', fontSize: '14px', color: '#666' }}>
+                      {new Date(donor.lastDonation).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '15px', fontSize: '14px' }}>
+                      {donor.paymentMethods.join(', ')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
