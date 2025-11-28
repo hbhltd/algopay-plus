@@ -2740,6 +2740,13 @@ function CreatorPage({ username, navigate }) {
   const [processing, setProcessing] = useState(false);
   const { accountAddress, connectWallet } = useContext(AuthContext);
 
+  // Community subscription state
+  const [showCommunityModal, setShowCommunityModal] = useState(false);
+  const [communityEmail, setCommunityEmail] = useState('');
+  const [communityName, setCommunityName] = useState('');
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+
   useEffect(() => {
     fetchCreator();
   }, [username]);
@@ -2971,6 +2978,48 @@ function CreatorPage({ username, navigate }) {
     }
   };
 
+  const handleJoinCommunity = async () => {
+    if (!communityEmail) {
+      alert('Please enter your email address');
+      return;
+    }
+
+    setSubscribing(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/community/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorId: creator.id,
+          email: communityEmail,
+          name: communityName || null,
+          source: 'join_community_button'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join community');
+      }
+
+      setSubscribeSuccess(true);
+      setCommunityEmail('');
+      setCommunityName('');
+
+      setTimeout(() => {
+        setShowCommunityModal(false);
+        setSubscribeSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Join community error:', error);
+      alert(error.message || 'Failed to join community. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>;
   }
@@ -3010,6 +3059,194 @@ function CreatorPage({ username, navigate }) {
           <h1 style={{ fontSize: '32px', marginBottom: '8px', color: '#333' }}>{creator.display_name}</h1>
           {creator.bio && <p style={{ fontSize: '16px', color: '#666', maxWidth: '500px', margin: '0 auto' }}>{creator.bio}</p>}
         </div>
+
+        {/* Join Community Button */}
+        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <button
+            onClick={() => setShowCommunityModal(true)}
+            style={{
+              padding: '14px 32px',
+              fontSize: '16px',
+              fontWeight: '600',
+              backgroundColor: '#667eea',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+              transition: 'all 0.2s',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#5568d3';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = '#667eea';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+            }}
+          >
+            <span>📧</span>
+            <span>Join the Community (FREE)</span>
+          </button>
+          <p style={{ fontSize: '14px', color: '#666', marginTop: '8px', fontStyle: 'italic' }}>
+            Get updates and exclusive content via email
+          </p>
+        </div>
+
+        {/* Community Join Modal */}
+        {showCommunityModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '40px',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              position: 'relative'
+            }}>
+              {/* Close button */}
+              <button
+                onClick={() => setShowCommunityModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#999',
+                  lineHeight: 1
+                }}
+              >
+                ×
+              </button>
+
+              {subscribeSuccess ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
+                  <h2 style={{ fontSize: '24px', marginBottom: '12px', color: '#333' }}>
+                    Welcome to the Community!
+                  </h2>
+                  <p style={{ fontSize: '16px', color: '#666' }}>
+                    Check your email for a welcome message from {creator.display_name}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: '24px', marginBottom: '12px', color: '#333', textAlign: 'center' }}>
+                    Join {creator.display_name}'s Community
+                  </h2>
+                  <p style={{ fontSize: '14px', color: '#666', marginBottom: '30px', textAlign: 'center' }}>
+                    Get exclusive updates, behind-the-scenes content, and be the first to know about new releases.
+                  </p>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#333' }}>
+                      Your Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={communityName}
+                      onChange={(e) => setCommunityName(e.target.value)}
+                      placeholder="Enter your name"
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        fontSize: '16px',
+                        borderRadius: '8px',
+                        border: '2px solid #e0e0e0',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                      onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#333' }}>
+                      Email Address <span style={{ color: '#e74c3c' }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={communityEmail}
+                      onChange={(e) => setCommunityEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        fontSize: '16px',
+                        borderRadius: '8px',
+                        border: '2px solid #e0e0e0',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                      onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && communityEmail) {
+                          handleJoinCommunity();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '24px', fontSize: '12px', color: '#666', lineHeight: '1.5' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked disabled style={{ marginTop: '2px' }} />
+                      <span>
+                        I agree to receive emails from {creator.display_name}. You can unsubscribe at any time.
+                      </span>
+                    </label>
+                  </div>
+
+                  <button
+                    onClick={handleJoinCommunity}
+                    disabled={subscribing || !communityEmail}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      backgroundColor: communityEmail ? '#667eea' : '#ccc',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: communityEmail ? 'pointer' : 'not-allowed',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {subscribing ? 'Joining...' : 'Join Community'}
+                  </button>
+
+                  <p style={{ fontSize: '11px', color: '#999', marginTop: '16px', textAlign: 'center' }}>
+                    We respect your privacy. Your email will never be shared.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Donation Widget - Buy Me A Coffee Style */}
         <div style={{ backgroundColor: '#fff', padding: '40px 30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>

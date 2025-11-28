@@ -9,6 +9,7 @@ const path = require('path');
 const { Pool } = require('pg');
 
 // Create PostgreSQL pool
+// For Supabase: Get your connection string from Project Settings > Database > Connection string > URI
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });

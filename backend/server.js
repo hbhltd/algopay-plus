@@ -762,6 +762,175 @@ app.post('/api/newsletter/send', async (req, res) => {
 });
 
 // =====================================================
+// COMMUNITY SUBSCRIBER ENDPOINTS
+// =====================================================
+
+// Join community (email-only subscription)
+app.post('/api/community/subscribe', async (req, res) => {
+  try {
+    const { creatorId, email, name, source } = req.body;
+
+    if (!email || !creatorId) {
+      return res.status(400).json({ error: 'Email and creator ID are required' });
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Get client IP and user agent for GDPR compliance
+    const consentIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const consentUserAgent = req.headers['user-agent'];
+
+    // Check if already subscribed
+    const { data: existing } = await supabase
+      .from('community_subscribers')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .eq('email', email)
+      .single();
+
+    if (existing) {
+      if (existing.is_active) {
+        return res.status(400).json({ error: 'Already subscribed' });
+      } else {
+        // Reactivate subscription
+        const { data, error } = await supabase
+          .from('community_subscribers')
+          .update({
+            is_active: true,
+            unsubscribed_at: null,
+            name: name || existing.name,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return res.json({
+          message: 'Welcome back! Your subscription has been reactivated.',
+          subscriber: data
+        });
+      }
+    }
+
+    // Create new subscriber
+    const { data, error } = await supabase
+      .from('community_subscribers')
+      .insert([{
+        creator_id: creatorId,
+        email,
+        name,
+        source: source || 'join_community_button',
+        consent_given: true,
+        consent_ip: consentIp,
+        consent_user_agent: consentUserAgent,
+        receive_newsletters: true,
+        receive_updates: true,
+        receive_promotions: false
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') { // Duplicate key
+        return res.status(400).json({ error: 'Already subscribed' });
+      }
+      throw error;
+    }
+
+    // Get creator info for welcome email
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('email, display_name, username')
+      .eq('id', creatorId)
+      .single();
+
+    // TODO: Send welcome email to subscriber
+    // await sendCommunityWelcomeEmail(email, name, creator.display_name);
+
+    // TODO: Notify creator of new subscriber
+    // if (creator?.email) {
+    //   await sendNewSubscriberNotification(creator.email, name, email);
+    // }
+
+    res.status(201).json({
+      message: 'Successfully joined the community!',
+      subscriber: data
+    });
+  } catch (error) {
+    console.error('Community subscribe error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get community subscribers for a creator (protected endpoint)
+app.get('/api/community/subscribers/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    const { data, error } = await supabase
+      .from('community_subscribers')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({
+      subscribers: data,
+      total: data.length
+    });
+  } catch (error) {
+    console.error('Get subscribers error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Unsubscribe from community
+app.post('/api/community/unsubscribe', async (req, res) => {
+  try {
+    const { email, creatorId } = req.body;
+
+    if (!email || !creatorId) {
+      return res.status(400).json({ error: 'Email and creator ID are required' });
+    }
+
+    const { data, error } = await supabase
+      .from('community_subscribers')
+      .update({
+        is_active: false,
+        unsubscribed_at: new Date().toISOString()
+      })
+      .eq('email', email)
+      .eq('creator_id', creatorId)
+      .eq('is_active', true)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // Not found
+        return res.status(404).json({ error: 'Subscription not found' });
+      }
+      throw error;
+    }
+
+    res.json({
+      message: 'Successfully unsubscribed',
+      subscriber: data
+    });
+  } catch (error) {
+    console.error('Unsubscribe error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // DONATION ENDPOINTS
 // =====================================================
 
