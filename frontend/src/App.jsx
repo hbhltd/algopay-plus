@@ -133,76 +133,739 @@ function App() {
 
 // Landing Page Component
 function LandingPage({ navigate }) {
-  const { connectWallet, accountAddress } = useContext(AuthContext);
+  const [activeTab, setActiveTab] = useState('welcome');
 
-  const handleGetStarted = async () => {
-    if (!accountAddress) {
-      await connectWallet();
-    }
-    navigate('signup');
-  };
+  const tabs = [
+    { id: 'welcome', label: 'Welcome' },
+    { id: 'tour', label: 'Platform Tour' },
+    { id: 'examples', label: 'Examples' },
+    { id: 'pricing', label: 'Pricing' },
+    { id: 'build', label: 'Build Your Page' }
+  ];
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-      <header style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Supportly</h1>
-        <p style={{ fontSize: '24px', color: '#666' }}>Accept donations with zero platform fees</p>
-        <p style={{ fontSize: '18px', color: '#888', marginTop: '10px' }}>PayPal • Stripe • Cash App • Crypto (USDC)</p>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      {/* Header */}
+      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '20px 0' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+          <h1 style={{ fontSize: '32px', margin: 0, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Supportly
+          </h1>
+        </div>
       </header>
 
-      <section style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <button
-          onClick={handleGetStarted}
-          style={{
-            padding: '16px 48px',
-            fontSize: '20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer'
-          }}
-        >
-          Get Started
-        </button>
-      </section>
+      {/* Tab Navigation */}
+      <nav style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', gap: '30px' }}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '16px 8px',
+                border: 'none',
+                background: 'none',
+                fontSize: '16px',
+                fontWeight: activeTab === tab.id ? '600' : '400',
+                color: activeTab === tab.id ? '#667eea' : '#6b7280',
+                borderBottom: activeTab === tab.id ? '3px solid #667eea' : '3px solid transparent',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', marginTop: '60px' }}>
-        <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
-          <h3>🚀 Easy Setup</h3>
-          <p>Get your donation page up and running in minutes</p>
-        </div>
-        <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
-          <h3>💳 Multiple Payment Methods</h3>
-          <p>Accept PayPal, Stripe, Cash App, and crypto - all in one place</p>
-        </div>
-        <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
-          <h3>📊 Analytics</h3>
-          <p>Track your donations and supporter engagement</p>
-        </div>
-      </section>
+      {/* Tab Content */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '60px 20px' }}>
+        {activeTab === 'welcome' && <WelcomeTab navigate={navigate} setActiveTab={setActiveTab} />}
+        {activeTab === 'tour' && <TourTab />}
+        {activeTab === 'examples' && <ExamplesTab navigate={navigate} />}
+        {activeTab === 'pricing' && <PricingTab navigate={navigate} setActiveTab={setActiveTab} />}
+        {activeTab === 'build' && <BuildTab navigate={navigate} />}
+      </div>
 
-      <section style={{ marginTop: '80px', padding: '40px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '32px' }}>Why Creators Love Supportly</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '30px' }}>
+      {/* Footer */}
+      <footer style={{ backgroundColor: 'white', borderTop: '1px solid #e5e7eb', padding: '40px 0', marginTop: '80px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', textAlign: 'center' }}>
+          <p style={{ color: '#6b7280', marginBottom: '10px' }}>Questions? We're here to help!</p>
+          <p style={{ fontSize: '18px', fontWeight: '600', color: '#667eea' }}>
+            Email us at: <a href="mailto:support@supportly.com" style={{ color: '#667eea', textDecoration: 'none' }}>support@supportly.com</a>
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// Welcome Tab - Hero with Core Messaging
+function WelcomeTab({ navigate, setActiveTab }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      {/* Hero Section */}
+      <div style={{ marginBottom: '80px' }}>
+        <h2 style={{ fontSize: '56px', fontWeight: '700', marginBottom: '30px', lineHeight: '1.2' }}>
+          It's <span style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Your Money</span>.<br />
+          <span style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Your Content</span>.<br />
+          <span style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Your Donors</span>.
+        </h2>
+        <p style={{ fontSize: '24px', color: '#6b7280', marginBottom: '40px', maxWidth: '800px', margin: '0 auto 40px' }}>
+          The creator monetization platform that puts you in complete control. No percentage cuts, just a simple yearly fee.
+        </p>
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('build')}
+            style={{
+              padding: '18px 48px',
+              fontSize: '20px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px 0 rgba(102, 126, 234, 0.4)'
+            }}
+          >
+            Build Your Donation Page
+          </button>
+          <button
+            onClick={() => setActiveTab('tour')}
+            style={{
+              padding: '18px 48px',
+              fontSize: '20px',
+              fontWeight: '600',
+              background: 'white',
+              color: '#667eea',
+              border: '2px solid #667eea',
+              borderRadius: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            See How It Works
+          </button>
+        </div>
+      </div>
+
+      {/* Key Benefits */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginTop: '60px' }}>
+        <div style={{ padding: '40px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>💰</div>
+          <h3 style={{ fontSize: '24px', marginBottom: '15px' }}>It's Your Money - You Keep It</h3>
+          <p style={{ color: '#6b7280', fontSize: '16px' }}>
+            Payments go directly to YOUR accounts. We never touch your money. Zero platform fees on donations.
+          </p>
+        </div>
+        <div style={{ padding: '40px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎨</div>
+          <h3 style={{ fontSize: '24px', marginBottom: '15px' }}>Your Content - You Control It</h3>
+          <p style={{ color: '#6b7280', fontSize: '16px' }}>
+            Store content on YOUR preferred platform. Use YOUR storage. Connect YOUR tools. Total control.
+          </p>
+        </div>
+        <div style={{ padding: '40px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
+          <h3 style={{ fontSize: '24px', marginBottom: '15px' }}>They Are Your Donors</h3>
+          <p style={{ color: '#6b7280', fontSize: '16px' }}>
+            Build direct relationships with YOUR supporters. Export their data. They're yours, not ours.
+          </p>
+        </div>
+      </div>
+
+      {/* Payment Methods */}
+      <div style={{ marginTop: '80px', padding: '60px', backgroundColor: 'white', borderRadius: '16px' }}>
+        <h3 style={{ fontSize: '32px', marginBottom: '30px' }}>Accept Payments Your Way</h3>
+        <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '40px' }}>
+          Choose any payment methods that work for you and your audience
+        </p>
+        <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', flexWrap: 'wrap', fontSize: '18px', color: '#374151' }}>
+          <span>💳 Stripe</span>
+          <span>💰 PayPal</span>
+          <span>🔷 Pera Wallet</span>
+          <span>⚡ Lightning (Bitcoin)</span>
+          <span>🔵 Circle USDC</span>
+          <span>🌐 Noah</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Tour Tab - Platform Walkthrough
+function TourTab() {
+  return (
+    <div>
+      <h2 style={{ fontSize: '42px', marginBottom: '40px', textAlign: 'center' }}>How Supportly Works</h2>
+
+      <div style={{ display: 'grid', gap: '60px' }}>
+        {/* Step 1 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
           <div>
-            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>💰 Zero Platform Fees</h4>
-            <p style={{ color: '#666' }}>Payments go directly to your own accounts - we never touch your money</p>
+            <div style={{ fontSize: '64px', fontWeight: '700', color: '#667eea', marginBottom: '20px' }}>01</div>
+            <h3 style={{ fontSize: '32px', marginBottom: '20px' }}>Build Your Page</h3>
+            <p style={{ fontSize: '18px', color: '#6b7280', lineHeight: '1.8' }}>
+              Use our interactive builder to create your donation page. Upload your logo, select payment methods, connect your social media, and preview your page - all before paying a cent!
+            </p>
           </div>
-          <div>
-            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>🎛️ Full Control</h4>
-            <p style={{ color: '#666' }}>Toggle payment methods on/off, use your own email service</p>
-          </div>
-          <div>
-            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>👥 No Donor Accounts Required</h4>
-            <p style={{ color: '#666' }}>Your supporters can donate anonymously without creating accounts</p>
-          </div>
-          <div>
-            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>📧 Manage Your Community</h4>
-            <p style={{ color: '#666' }}>Export donor data for taxes, send newsletters to your supporters</p>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '2px solid #e5e7eb' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px', textAlign: 'center' }}>🎨</div>
+            <p style={{ textAlign: 'center', color: '#6b7280' }}>Interactive page builder with live preview</p>
           </div>
         </div>
-      </section>
+
+        {/* Step 2 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '2px solid #e5e7eb' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px', textAlign: 'center' }}>💳</div>
+            <p style={{ textAlign: 'center', color: '#6b7280' }}>Pay with ANY method you prefer</p>
+          </div>
+          <div>
+            <div style={{ fontSize: '64px', fontWeight: '700', color: '#667eea', marginBottom: '20px' }}>02</div>
+            <h3 style={{ fontSize: '32px', marginBottom: '20px' }}>Purchase Your Platform</h3>
+            <p style={{ fontSize: '18px', color: '#6b7280', lineHeight: '1.8' }}>
+              Love what you built? Pay just $49.95/year using Stripe, PayPal, Pera Wallet, Lightning, Circle USDC, or Noah. Choose what works best for you!
+            </p>
+          </div>
+        </div>
+
+        {/* Step 3 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '64px', fontWeight: '700', color: '#667eea', marginBottom: '20px' }}>03</div>
+            <h3 style={{ fontSize: '32px', marginBottom: '20px' }}>Go Live Instantly</h3>
+            <p style={{ fontSize: '18px', color: '#6b7280', lineHeight: '1.8' }}>
+              Your page goes live at @yourname immediately. Add your real API keys for payment methods, connect your storage (S3, R2, Spaces), and start accepting donations right away!
+            </p>
+          </div>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '2px solid #e5e7eb' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px', textAlign: 'center' }}>🚀</div>
+            <p style={{ textAlign: 'center', color: '#6b7280' }}>Instant activation, full control</p>
+          </div>
+        </div>
+
+        {/* Step 4 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '2px solid #e5e7eb' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px', textAlign: 'center' }}>💰</div>
+            <p style={{ textAlign: 'center', color: '#6b7280' }}>Keep 100% of every donation</p>
+          </div>
+          <div>
+            <div style={{ fontSize: '64px', fontWeight: '700', color: '#667eea', marginBottom: '20px' }}>04</div>
+            <h3 style={{ fontSize: '32px', marginBottom: '20px' }}>Accept Donations</h3>
+            <p style={{ fontSize: '18px', color: '#6b7280', lineHeight: '1.8' }}>
+              Donors can give you "Boosts" (one-time) or "Wings" (recurring support) using any payment method you've enabled. Money goes directly to YOUR accounts - we never touch it!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Examples Tab
+function ExamplesTab({ navigate }) {
+  const examples = [
+    {
+      name: 'Sarah Chen',
+      username: 'sarahcodes',
+      category: 'Software Developer',
+      description: 'Teaching programming through live coding sessions',
+      methods: ['Stripe', 'Lightning', 'USDC']
+    },
+    {
+      name: 'Alex Rivera',
+      username: 'alexart',
+      category: 'Digital Artist',
+      description: 'Creating exclusive NFT art for supporters',
+      methods: ['PayPal', 'Pera Wallet', 'Stripe']
+    },
+    {
+      name: 'Jamie Park',
+      username: 'jamiegaming',
+      category: 'Gaming Streamer',
+      description: 'Live streaming with exclusive Discord perks',
+      methods: ['Stripe', 'Circle', 'PayPal']
+    }
+  ];
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '42px', marginBottom: '20px', textAlign: 'center' }}>Creators Using Supportly</h2>
+      <p style={{ fontSize: '20px', color: '#6b7280', textAlign: 'center', marginBottom: '60px' }}>
+        See how creators are building sustainable income with Supportly
+      </p>
+
+      <div style={{ display: 'grid', gap: '30px' }}>
+        {examples.map((creator, index) => (
+          <div key={index} style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '28px', marginBottom: '8px' }}>{creator.name}</h3>
+                <p style={{ color: '#667eea', fontSize: '18px', marginBottom: '4px' }}>@{creator.username}</p>
+                <p style={{ color: '#9ca3af', fontSize: '16px' }}>{creator.category}</p>
+              </div>
+              <button
+                onClick={() => {/* In real app, would navigate to creator page */}}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Visit Page
+              </button>
+            </div>
+            <p style={{ fontSize: '18px', color: '#4b5563', marginBottom: '20px' }}>
+              {creator.description}
+            </p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: '600' }}>Accepts:</span>
+              {creator.methods.map((method, i) => (
+                <span key={i} style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  color: '#374151'
+                }}>
+                  {method}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Pricing Tab (simplified for homepage)
+function PricingTab({ navigate, setActiveTab }) {
+  return (
+    <div>
+      <h2 style={{ fontSize: '42px', marginBottom: '20px', textAlign: 'center' }}>Simple, Transparent Pricing</h2>
+      <p style={{ fontSize: '20px', color: '#6b7280', textAlign: 'center', marginBottom: '60px' }}>
+        Everything included. No hidden fees. No percentage cuts on donations.
+      </p>
+
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '60px',
+          borderRadius: '24px',
+          border: '3px solid #667eea',
+          boxShadow: '0 20px 60px rgba(102, 126, 234, 0.2)'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <h3 style={{ fontSize: '36px', marginBottom: '20px' }}>Supportly Creator</h3>
+            <div style={{ fontSize: '72px', fontWeight: '700', marginBottom: '10px' }}>
+              <span style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                $49.95
+              </span>
+            </div>
+            <p style={{ fontSize: '24px', color: '#6b7280' }}>per year • billed annually</p>
+          </div>
+
+          <div style={{ marginBottom: '40px' }}>
+            <h4 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center' }}>What's Included</h4>
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {[
+                'All payment methods (Stripe, PayPal, Pera, Lightning, Circle, Noah)',
+                'Unlimited donations - no caps, no limits',
+                'Zero platform fees on donations (you keep 100%)',
+                'One-time "Boosts" and recurring "Wings" support',
+                'Exclusive donor shop with token-based access',
+                'QR code generator for offline donations',
+                'Connect your own storage (S3, R2, Spaces, etc.)',
+                'Social media integrations (X, Instagram, YouTube, TikTok)',
+                'Advanced analytics and donor insights',
+                'Customizable donation page',
+                'Email support'
+              ].map((feature, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                  <span style={{ color: '#667eea', fontSize: '24px', flexShrink: 0 }}>✓</span>
+                  <span style={{ fontSize: '18px', color: '#374151' }}>{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActiveTab('build')}
+            style={{
+              width: '100%',
+              padding: '20px',
+              fontSize: '22px',
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px 0 rgba(102, 126, 234, 0.4)'
+            }}
+          >
+            Start Building Your Page Now
+          </button>
+        </div>
+
+        {/* Comparison */}
+        <div style={{ marginTop: '60px', padding: '40px', backgroundColor: 'white', borderRadius: '16px' }}>
+          <h4 style={{ fontSize: '28px', marginBottom: '30px', textAlign: 'center' }}>Compare to Other Platforms</h4>
+          <div style={{ display: 'grid', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+              <div><strong>Platform</strong></div>
+              <div><strong>Annual Cost</strong></div>
+              <div><strong>Donation Fees</strong></div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', padding: '20px', backgroundColor: '#ecfdf5', borderRadius: '8px' }}>
+              <div style={{ fontWeight: '600' }}>Supportly</div>
+              <div style={{ color: '#059669' }}>$49.95/year</div>
+              <div style={{ color: '#059669', fontWeight: '600' }}>0% - You keep 100%</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', padding: '20px' }}>
+              <div>Buy Me A Coffee</div>
+              <div>$0</div>
+              <div style={{ color: '#dc2626' }}>5% platform fee</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', padding: '20px' }}>
+              <div>Patreon</div>
+              <div>$0-$144/year</div>
+              <div style={{ color: '#dc2626' }}>5-12% platform fee</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', padding: '20px' }}>
+              <div>Ko-fi</div>
+              <div>$72/year</div>
+              <div style={{ color: '#dc2626' }}>5% (free tier)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Build Tab - Interactive Page Builder
+function BuildTab({ navigate }) {
+  const [email, setEmail] = useState('');
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [builderData, setBuilderData] = useState({
+    displayName: '',
+    username: '',
+    bio: '',
+    logo: null,
+    paymentMethods: {
+      stripe: false,
+      paypal: false,
+      pera: false,
+      lightning: false,
+      circle: false,
+      noah: false
+    },
+    socialMedia: {
+      twitter: '',
+      instagram: '',
+      youtube: '',
+      tiktok: ''
+    }
+  });
+
+  const handleEmailSubmit = (e) => {
+    e.preventDefault();
+    if (email) {
+      setShowBuilder(true);
+    }
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBuilderData(prev => ({ ...prev, logo: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const togglePaymentMethod = (method) => {
+    setBuilderData(prev => ({
+      ...prev,
+      paymentMethods: {
+        ...prev.paymentMethods,
+        [method]: !prev.paymentMethods[method]
+      }
+    }));
+  };
+
+  if (!showBuilder) {
+    return (
+      <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '42px', marginBottom: '20px' }}>Build Your Donation Page</h2>
+        <p style={{ fontSize: '20px', color: '#6b7280', marginBottom: '40px' }}>
+          See exactly what you're getting before you pay. Create your page interactively and purchase when you're ready!
+        </p>
+
+        <form onSubmit={handleEmailSubmit} style={{ marginTop: '40px' }}>
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', fontSize: '18px', marginBottom: '10px', fontWeight: '600' }}>
+              What's your email?
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              style={{
+                width: '100%',
+                padding: '16px',
+                fontSize: '18px',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                outline: 'none'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+            />
+          </div>
+
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              padding: '18px',
+              fontSize: '20px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px 0 rgba(102, 126, 234, 0.4)'
+            }}
+          >
+            Start Building
+          </button>
+        </form>
+
+        <p style={{ marginTop: '30px', color: '#9ca3af', fontSize: '14px' }}>
+          No account needed yet - just your email to save your progress
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '42px', marginBottom: '40px', textAlign: 'center' }}>Build Your Donation Page</h2>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+        {/* Builder Form */}
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', height: 'fit-content' }}>
+          <h3 style={{ fontSize: '24px', marginBottom: '30px' }}>Customize Your Page</h3>
+
+          {/* Basic Info */}
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Display Name</label>
+            <input
+              type="text"
+              value={builderData.displayName}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, displayName: e.target.value }))}
+              placeholder="Your Name"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Username</label>
+            <input
+              type="text"
+              value={builderData.username}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }))}
+              placeholder="yourname"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px' }}
+            />
+            {builderData.username && (
+              <p style={{ marginTop: '8px', color: '#667eea', fontSize: '14px' }}>
+                Your page: supportly.com/@{builderData.username}
+              </p>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Bio</label>
+            <textarea
+              value={builderData.bio}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, bio: e.target.value }))}
+              placeholder="Tell your supporters about yourself..."
+              rows="4"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px', fontFamily: 'inherit' }}
+            />
+          </div>
+
+          {/* Logo Upload */}
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Logo / Profile Picture</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              style={{ marginBottom: '10px' }}
+            />
+            {builderData.logo && (
+              <img src={builderData.logo} alt="Logo preview" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }} />
+            )}
+          </div>
+
+          {/* Payment Methods */}
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>Payment Methods You'll Accept</label>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {[
+                { id: 'stripe', label: '💳 Stripe (Credit/Debit Cards)' },
+                { id: 'paypal', label: '💰 PayPal' },
+                { id: 'pera', label: '🔷 Pera Wallet (Algorand)' },
+                { id: 'lightning', label: '⚡ Lightning Network (Bitcoin)' },
+                { id: 'circle', label: '🔵 Circle USDC' },
+                { id: 'noah', label: '🌐 Noah Payments' }
+              ].map(method => (
+                <label key={method.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', backgroundColor: builderData.paymentMethods[method.id] ? '#ecfdf5' : '#f9fafb', borderRadius: '8px', cursor: 'pointer', border: builderData.paymentMethods[method.id] ? '2px solid #059669' : '2px solid transparent' }}>
+                  <input
+                    type="checkbox"
+                    checked={builderData.paymentMethods[method.id]}
+                    onChange={() => togglePaymentMethod(method.id)}
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                  <span>{method.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Social Media */}
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>Social Media (Optional)</label>
+            <input
+              type="text"
+              value={builderData.socialMedia.twitter}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, socialMedia: { ...prev.socialMedia, twitter: e.target.value } }))}
+              placeholder="Twitter/X username"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px', marginBottom: '10px' }}
+            />
+            <input
+              type="text"
+              value={builderData.socialMedia.instagram}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, socialMedia: { ...prev.socialMedia, instagram: e.target.value } }))}
+              placeholder="Instagram username"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px', marginBottom: '10px' }}
+            />
+            <input
+              type="text"
+              value={builderData.socialMedia.youtube}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, socialMedia: { ...prev.socialMedia, youtube: e.target.value } }))}
+              placeholder="YouTube channel"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px', marginBottom: '10px' }}
+            />
+            <input
+              type="text"
+              value={builderData.socialMedia.tiktok}
+              onChange={(e) => setBuilderData(prev => ({ ...prev, socialMedia: { ...prev.socialMedia, tiktok: e.target.value } }))}
+              placeholder="TikTok username"
+              style={{ width: '100%', padding: '12px', fontSize: '16px', border: '2px solid #e5e7eb', borderRadius: '8px' }}
+            />
+          </div>
+
+          <button
+            onClick={() => navigate('signup')}
+            style={{
+              width: '100%',
+              padding: '18px',
+              fontSize: '20px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px 0 rgba(102, 126, 234, 0.4)'
+            }}
+          >
+            Purchase This Page - $49.95/year
+          </button>
+        </div>
+
+        {/* Live Preview */}
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '16px', border: '3px dashed #667eea', position: 'sticky', top: '20px', height: 'fit-content' }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px', padding: '10px', backgroundColor: '#667eea', color: 'white', borderRadius: '8px', fontWeight: '600' }}>
+            📱 LIVE PREVIEW
+          </div>
+
+          {builderData.logo && (
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <img src={builderData.logo} alt="Logo" style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover' }} />
+            </div>
+          )}
+
+          <h2 style={{ fontSize: '32px', textAlign: 'center', marginBottom: '10px' }}>
+            {builderData.displayName || 'Your Name'}
+          </h2>
+
+          {builderData.username && (
+            <p style={{ textAlign: 'center', color: '#667eea', marginBottom: '20px' }}>
+              @{builderData.username}
+            </p>
+          )}
+
+          {builderData.bio && (
+            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '30px', lineHeight: '1.6' }}>
+              {builderData.bio}
+            </p>
+          )}
+
+          {/* Preview Donation Buttons */}
+          <div style={{ display: 'grid', gap: '15px', marginTop: '30px' }}>
+            <button style={{ padding: '16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: '600', cursor: 'not-allowed', opacity: 0.7 }}>
+              💜 Give a Boost
+            </button>
+            <button style={{ padding: '16px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: '600', cursor: 'not-allowed', opacity: 0.7 }}>
+              🦋 Give Wings (Monthly)
+            </button>
+          </div>
+
+          {/* Preview Payment Methods */}
+          {Object.values(builderData.paymentMethods).some(v => v) && (
+            <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+              <p style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#6b7280' }}>Accepts:</p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {builderData.paymentMethods.stripe && <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '6px' }}>💳 Stripe</span>}
+                {builderData.paymentMethods.paypal && <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '6px' }}>💰 PayPal</span>}
+                {builderData.paymentMethods.pera && <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '6px' }}>🔷 Pera</span>}
+                {builderData.paymentMethods.lightning && <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '6px' }}>⚡ Lightning</span>}
+                {builderData.paymentMethods.circle && <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '6px' }}>🔵 Circle</span>}
+                {builderData.paymentMethods.noah && <span style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '6px' }}>🌐 Noah</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Preview Social Links */}
+          {Object.values(builderData.socialMedia).some(v => v) && (
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {builderData.socialMedia.twitter && <span style={{ padding: '8px 16px', backgroundColor: '#1da1f2', color: 'white', borderRadius: '8px', fontSize: '14px' }}>𝕏 Twitter</span>}
+              {builderData.socialMedia.instagram && <span style={{ padding: '8px 16px', background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)', color: 'white', borderRadius: '8px', fontSize: '14px' }}>📷 Instagram</span>}
+              {builderData.socialMedia.youtube && <span style={{ padding: '8px 16px', backgroundColor: '#ff0000', color: 'white', borderRadius: '8px', fontSize: '14px' }}>▶️ YouTube</span>}
+              {builderData.socialMedia.tiktok && <span style={{ padding: '8px 16px', backgroundColor: '#000000', color: 'white', borderRadius: '8px', fontSize: '14px' }}>🎵 TikTok</span>}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -359,7 +1022,7 @@ function PricingPage({ navigate }) {
 
             <h3 style={{ fontSize: '28px', marginBottom: '10px' }}>Supportly Creator</h3>
             <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px' }}>
-              $24.95
+              $49.95
               <span style={{ fontSize: '18px', fontWeight: 'normal', color: '#666' }}>/year</span>
             </div>
             <p style={{ color: '#666', marginBottom: '30px' }}>Everything you need - ALL features unlocked!</p>

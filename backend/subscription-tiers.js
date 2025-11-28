@@ -1,6 +1,6 @@
 /**
  * Subscription Tier Configuration
- * Simplified pricing: Free trial + One paid tier at $24.95/year
+ * Simplified pricing: Free trial + One paid tier at $49.95/year
  */
 
 const SUBSCRIPTION_TIERS = {
@@ -77,7 +77,7 @@ const SUBSCRIPTION_TIERS = {
   PAID: {
     id: 'paid',
     name: 'Supportly Creator',
-    price: 24.95, // USD per year - SIMPLIFIED PRICING!
+    price: 49.95, // USD per year - SIMPLIFIED PRICING!
     billingPeriod: 'yearly',
     features: {
       // Payment Methods - ALL UNLOCKED
@@ -133,7 +133,7 @@ const SUBSCRIPTION_TIERS = {
       maxNewsletterSubscribers: -1,
       dataRetentionDays: -1,
     },
-    description: 'Everything you need to grow your creator business - just $24.95/year!',
+    description: 'Everything you need to grow your creator business - just $49.95/year!',
     highlights: [
       '✨ ALL Features Unlocked',
       '💳 All Payment Methods (Crypto, Stripe, PayPal, Cash App)',
@@ -157,7 +157,7 @@ const SUBSCRIPTION_TIERS = {
   PRO: {
     id: 'paid',
     name: 'Supportly Creator',
-    price: 24.95,
+    price: 49.95,
     billingPeriod: 'yearly',
     get features() { return SUBSCRIPTION_TIERS.PAID.features; },
     get description() { return SUBSCRIPTION_TIERS.PAID.description; },
@@ -167,7 +167,7 @@ const SUBSCRIPTION_TIERS = {
   PREMIUM: {
     id: 'paid',
     name: 'Supportly Creator',
-    price: 24.95,
+    price: 49.95,
     billingPeriod: 'yearly',
     get features() { return SUBSCRIPTION_TIERS.PAID.features; },
     get description() { return SUBSCRIPTION_TIERS.PAID.description; },
@@ -241,8 +241,8 @@ function getUpgradeRecommendation(currentTier, desiredFeature) {
     return {
       recommendedTier: 'paid',
       tierName: 'Supportly Creator',
-      price: 24.95,
-      reason: `${desiredFeature} is available with Supportly Creator for just $24.95/year`
+      price: 49.95,
+      reason: `${desiredFeature} is available with Supportly Creator for just $49.95/year`
     };
   }
 

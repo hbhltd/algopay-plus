@@ -70,7 +70,7 @@ curl http://localhost:3001/api/subscriptions/tiers
 
 Should show:
 - Free Trial ($0)
-- Supportly Creator ($24.95/year)
+- Supportly Creator ($49.95/year)
 
 ---
 
@@ -115,7 +115,7 @@ This should trigger:
 - [ ] Server starts without errors
 - [ ] Migrations complete successfully
 - [ ] Creator can be created
-- [ ] Subscription can be created at $24.95
+- [ ] Subscription can be created at $49.95
 - [ ] Donations can be recorded
 - [ ] Integrations trigger (Discord, Zapier, QuickBooks)
 

@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Supportly platform includes a comprehensive subscription system with **simple, affordable pricing** at just **$24.95/year** for creators, with automatic yearly renewals.
+The Supportly platform includes a comprehensive subscription system with **simple, affordable pricing** at just **$49.95/year** for creators, with automatic yearly renewals.
 
 ## Features
 
 ### ✅ Phase 1: Subscription Tier System (COMPLETED)
 
-- **Simplified pricing model** (Free Trial + Paid $24.95/year - ALL features unlocked!)
+- **Simplified pricing model** (Free Trial + Paid $49.95/year - ALL features unlocked!)
 - **Feature-based access control** with tier enforcement
 - **Stripe integration** for recurring payments
 - **Subscription management API** with full CRUD operations
@@ -36,8 +36,8 @@ Perfect for trying out Supportly:
 - Community support
 - 30-day data retention
 
-### ✨ Supportly Creator ($24.95/year)
-**Everything you need - ALL features unlocked for just $24.95/year!**
+### ✨ Supportly Creator ($49.95/year)
+**Everything you need - ALL features unlocked for just $49.95/year!**
 
 **Payment Methods:**
 - ✅ Crypto (USDC)

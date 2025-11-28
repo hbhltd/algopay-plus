@@ -145,8 +145,8 @@ function requireTier(minTierName) {
           currentTier,
           requiredTier: 'paid',
           upgradeUrl: `/pricing`,
-          price: 24.95,
-          message: 'Upgrade to Supportly Creator for just $24.95/year to unlock all features!'
+          price: 49.95,
+          message: 'Upgrade to Supportly Creator for just $49.95/year to unlock all features!'
         });
       }
 
