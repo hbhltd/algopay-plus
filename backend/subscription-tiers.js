@@ -1,12 +1,12 @@
 /**
  * Subscription Tier Configuration
- * Defines pricing, features, and limits for each tier
+ * Simplified pricing: Free trial + One paid tier at $24.95/year
  */
 
 const SUBSCRIPTION_TIERS = {
   FREE: {
     id: 'free',
-    name: 'Free',
+    name: 'Free Trial',
     price: 0,
     billingPeriod: 'lifetime',
     features: {
@@ -17,7 +17,7 @@ const SUBSCRIPTION_TIERS = {
       cashappDisplay: false,
 
       // Donation Features
-      maxMonthlyDonations: 50,
+      maxMonthlyDonations: 10, // Very limited for trial
       customDonationAmounts: true,
       recurringDonations: false,
       donorMessages: true,
@@ -26,13 +26,13 @@ const SUBSCRIPTION_TIERS = {
       // Email & Notifications
       emailNotifications: true,
       customEmailService: false,
-      emailTemplates: 'basic', // basic, custom
+      emailTemplates: 'basic',
       webhooks: false,
 
       // Analytics & Reporting
       basicAnalytics: true,
       advancedAnalytics: false,
-      exportData: false, // CSV/JSON export
+      exportData: false,
       revenueReports: false,
       donorInsights: false,
 
@@ -55,166 +55,123 @@ const SUBSCRIPTION_TIERS = {
       scheduledSessions: false,
 
       // Support
-      supportLevel: 'community', // community, email, priority
+      supportLevel: 'community',
 
       // Limits
       maxWebhooks: 0,
-      maxEmailsPerMonth: 100,
+      maxEmailsPerMonth: 50,
       maxNewsletterSubscribers: 0,
-      dataRetentionDays: 90,
+      dataRetentionDays: 30,
     },
-    description: 'Perfect for getting started with crypto donations',
+    description: 'Try Supportly free - perfect for getting started',
     highlights: [
       'Crypto (USDC) payments',
-      'Up to 50 donations/month',
+      'Up to 10 donations/month',
       'Basic analytics',
       'Email notifications',
       'Community support'
-    ]
+    ],
+    trialMode: true
   },
 
-  PRO: {
-    id: 'pro',
-    name: 'Pro',
-    price: 99, // USD per year
+  PAID: {
+    id: 'paid',
+    name: 'Supportly Creator',
+    price: 24.95, // USD per year - SIMPLIFIED PRICING!
     billingPeriod: 'yearly',
     features: {
-      // Payment Methods
+      // Payment Methods - ALL UNLOCKED
       cryptoPayments: true,
       stripePayments: true,
       paypalPayments: true,
       cashappDisplay: true,
 
-      // Donation Features
-      maxMonthlyDonations: 500,
-      customDonationAmounts: true,
-      recurringDonations: true,
-      donorMessages: true,
-      nftRewards: true,
-
-      // Email & Notifications
-      emailNotifications: true,
-      customEmailService: true,
-      emailTemplates: 'custom',
-      webhooks: true,
-
-      // Analytics & Reporting
-      basicAnalytics: true,
-      advancedAnalytics: true,
-      exportData: true,
-      revenueReports: true,
-      donorInsights: true,
-
-      // Community & Engagement
-      donorManagement: true,
-      newsletter: true,
-      customBranding: true,
-      customDomain: false,
-
-      // Integrations
-      discordIntegration: true,
-      zapierIntegration: true,
-      socialMediaIntegration: true,
-      accountingIntegration: false,
-
-      // Content & Monetization
-      contentGating: true,
-      digitalProducts: false,
-      membershipTiers: 1, // max membership tiers
-      scheduledSessions: false,
-
-      // Support
-      supportLevel: 'email',
-
-      // Limits
-      maxWebhooks: 5,
-      maxEmailsPerMonth: 5000,
-      maxNewsletterSubscribers: 1000,
-      dataRetentionDays: 365,
-    },
-    description: 'For serious creators building their community',
-    highlights: [
-      'All payment methods (Crypto, Stripe, PayPal)',
-      'Up to 500 donations/month',
-      'Advanced analytics & reports',
-      'Webhooks & integrations',
-      'Donor management & newsletters',
-      'NFT rewards',
-      'Email support'
-    ]
-  },
-
-  PREMIUM: {
-    id: 'premium',
-    name: 'Premium',
-    price: 299, // USD per year
-    billingPeriod: 'yearly',
-    features: {
-      // Payment Methods
-      cryptoPayments: true,
-      stripePayments: true,
-      paypalPayments: true,
-      cashappDisplay: true,
-
-      // Donation Features
+      // Donation Features - ALL UNLOCKED
       maxMonthlyDonations: -1, // unlimited
       customDonationAmounts: true,
       recurringDonations: true,
       donorMessages: true,
       nftRewards: true,
 
-      // Email & Notifications
+      // Email & Notifications - ALL UNLOCKED
       emailNotifications: true,
       customEmailService: true,
       emailTemplates: 'custom',
       webhooks: true,
 
-      // Analytics & Reporting
+      // Analytics & Reporting - ALL UNLOCKED
       basicAnalytics: true,
       advancedAnalytics: true,
       exportData: true,
       revenueReports: true,
       donorInsights: true,
 
-      // Community & Engagement
+      // Community & Engagement - ALL UNLOCKED
       donorManagement: true,
       newsletter: true,
       customBranding: true,
       customDomain: true,
 
-      // Integrations
+      // Integrations - ALL UNLOCKED
       discordIntegration: true,
       zapierIntegration: true,
       socialMediaIntegration: true,
       accountingIntegration: true,
 
-      // Content & Monetization
+      // Content & Monetization - ALL UNLOCKED
       contentGating: true,
       digitalProducts: true,
       membershipTiers: -1, // unlimited
       scheduledSessions: true,
 
       // Support
-      supportLevel: 'priority',
+      supportLevel: 'email',
 
-      // Limits
-      maxWebhooks: -1, // unlimited
-      maxEmailsPerMonth: -1, // unlimited
-      maxNewsletterSubscribers: -1, // unlimited
-      dataRetentionDays: -1, // unlimited (permanent)
+      // Limits - ALL UNLIMITED
+      maxWebhooks: -1,
+      maxEmailsPerMonth: -1,
+      maxNewsletterSubscribers: -1,
+      dataRetentionDays: -1,
     },
-    description: 'Complete solution for professional creators',
+    description: 'Everything you need to grow your creator business - just $24.95/year!',
     highlights: [
-      'Unlimited donations',
-      'All payment methods',
-      'Full analytics suite',
-      'Unlimited webhooks',
-      'Custom domain',
-      'Digital products & content gating',
-      'QuickBooks integration',
-      'Scheduled consultations',
-      'Priority support'
+      '✨ ALL Features Unlocked',
+      '💳 All Payment Methods (Crypto, Stripe, PayPal, Cash App)',
+      '📊 Advanced Analytics & Reporting',
+      '🎮 Discord Community Integration',
+      '⚡ Zapier Automation (5000+ Apps)',
+      '💼 QuickBooks Accounting Sync',
+      '🎁 NFT Rewards for Supporters',
+      '📧 Unlimited Email Campaigns',
+      '🔒 Content Gating & Digital Products',
+      '📱 Social Media Auto-Posting',
+      '🌐 Custom Domain Support',
+      '💬 Email Support',
+      '♾️ Unlimited Donations',
+      '♾️ Unlimited Webhooks',
+      '♾️ Unlimited Newsletter Subscribers'
     ]
+  },
+
+  // Legacy tier names for backwards compatibility
+  PRO: {
+    id: 'paid',
+    name: 'Supportly Creator',
+    price: 24.95,
+    billingPeriod: 'yearly',
+    get features() { return SUBSCRIPTION_TIERS.PAID.features; },
+    get description() { return SUBSCRIPTION_TIERS.PAID.description; },
+    get highlights() { return SUBSCRIPTION_TIERS.PAID.highlights; }
+  },
+
+  PREMIUM: {
+    id: 'paid',
+    name: 'Supportly Creator',
+    price: 24.95,
+    billingPeriod: 'yearly',
+    get features() { return SUBSCRIPTION_TIERS.PAID.features; },
+    get description() { return SUBSCRIPTION_TIERS.PAID.description; },
+    get highlights() { return SUBSCRIPTION_TIERS.PAID.highlights; }
   }
 };
 
@@ -273,22 +230,20 @@ function canPerformAction(tierName, action, currentUsage = 0) {
 }
 
 /**
- * Get upgrade recommendations based on feature needs
+ * Get upgrade recommendation based on feature needs
  */
 function getUpgradeRecommendation(currentTier, desiredFeature) {
-  const tiers = ['FREE', 'PRO', 'PREMIUM'];
-  const currentIndex = tiers.indexOf(currentTier.toUpperCase());
+  // Simplified: Only one paid tier
+  const currentTierUpper = currentTier.toUpperCase();
 
-  for (let i = currentIndex + 1; i < tiers.length; i++) {
-    const tier = tiers[i];
-    if (hasFeature(tier, desiredFeature)) {
-      return {
-        recommendedTier: SUBSCRIPTION_TIERS[tier].id,
-        tierName: SUBSCRIPTION_TIERS[tier].name,
-        price: SUBSCRIPTION_TIERS[tier].price,
-        reason: `${desiredFeature} is available on the ${SUBSCRIPTION_TIERS[tier].name} plan`
-      };
-    }
+  // If on free tier and feature requires paid
+  if (currentTierUpper === 'FREE' && hasFeature('PAID', desiredFeature)) {
+    return {
+      recommendedTier: 'paid',
+      tierName: 'Supportly Creator',
+      price: 24.95,
+      reason: `${desiredFeature} is available with Supportly Creator for just $24.95/year`
+    };
   }
 
   return null;
@@ -296,6 +251,7 @@ function getUpgradeRecommendation(currentTier, desiredFeature) {
 
 /**
  * Calculate prorated amount for subscription changes
+ * Simplified since we only have one paid tier now
  */
 function calculateProration(currentTier, newTier, daysRemaining, totalDays = 365) {
   const currentConfig = getTierConfig(currentTier);

@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Supportly platform now includes a comprehensive subscription system where creators purchase access to the platform with tiered pricing and automatic yearly renewals.
+The Supportly platform includes a comprehensive subscription system with **simple, affordable pricing** at just **$24.95/year** for creators, with automatic yearly renewals.
 
 ## Features
 
 ### ✅ Phase 1: Subscription Tier System (COMPLETED)
 
-- **Three-tier pricing model** (Free, Pro $99/year, Premium $299/year)
+- **Simplified pricing model** (Free Trial + Paid $24.95/year - ALL features unlocked!)
 - **Feature-based access control** with tier enforcement
 - **Stripe integration** for recurring payments
 - **Subscription management API** with full CRUD operations
@@ -27,34 +27,51 @@ The Supportly platform now includes a comprehensive subscription system where cr
 
 ## Subscription Tiers
 
-### Free Tier ($0)
+### 🎁 Free Trial ($0)
+Perfect for trying out Supportly:
 - Crypto (USDC) payments only
-- Up to 50 donations/month
+- Up to 10 donations/month
 - Basic analytics
 - Email notifications
 - Community support
+- 30-day data retention
 
-### Pro Tier ($99/year)
-- All payment methods (Crypto, Stripe, PayPal, Cash App)
-- Up to 500 donations/month
-- Advanced analytics & reports
-- Webhooks (up to 5)
-- Donor management & newsletters (1,000 subscribers)
-- NFT rewards
-- Discord & social media integrations
-- Email support
+### ✨ Supportly Creator ($24.95/year)
+**Everything you need - ALL features unlocked for just $24.95/year!**
 
-### Premium Tier ($299/year)
-- **Unlimited** donations
-- **Unlimited** webhooks
-- **Unlimited** newsletter subscribers
-- All payment methods
-- Full analytics suite
-- Custom domain
-- Digital products & content gating
-- QuickBooks integration
-- Scheduled consultations
-- Priority support
+**Payment Methods:**
+- ✅ Crypto (USDC)
+- ✅ Stripe (Credit Cards, Apple Pay, Google Pay)
+- ✅ PayPal
+- ✅ Cash App
+
+**Core Features:**
+- ♾️ **Unlimited donations**
+- ♾️ **Unlimited webhooks**
+- ♾️ **Unlimited email campaigns**
+- ♾️ **Unlimited newsletter subscribers**
+- 🎁 NFT rewards for supporters
+- 📊 Advanced analytics & reporting
+- 📧 Custom email service integration
+- 🔔 Webhook notifications
+
+**Integrations:**
+- 🎮 Discord community integration
+- ⚡ Zapier automation (5000+ apps)
+- 💼 QuickBooks accounting sync
+- 📱 Social media auto-posting (Twitter/Instagram)
+
+**Content Monetization:**
+- 🔒 Content gating
+- 📦 Digital product sales
+- 🎯 Membership tiers
+- 📅 Scheduled consultations
+
+**Additional Features:**
+- 🎨 Custom branding
+- 🌐 Custom domain support
+- 💬 Email support
+- ♾️ Unlimited data retention
 
 ---
 

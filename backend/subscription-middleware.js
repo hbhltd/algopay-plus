@@ -127,26 +127,26 @@ function requireTier(minTierName) {
       const subscription = await subscriptionService.getCreatorSubscription(creatorId);
       const currentTier = subscription ? subscription.tier : 'free';
 
-      // Define tier hierarchy
+      // Simplified tier hierarchy: free (0) or paid (1)
       const tierHierarchy = {
         'free': 0,
-        'pro': 1,
-        'premium': 2
+        'paid': 1,
+        'pro': 1, // legacy compatibility
+        'premium': 1 // legacy compatibility
       };
 
       const currentLevel = tierHierarchy[currentTier] || 0;
       const requiredLevel = tierHierarchy[minTierName] || 0;
 
       if (currentLevel < requiredLevel) {
-        const requiredConfig = getTierConfig(minTierName);
-
         return res.status(403).json({
           success: false,
-          error: `This feature requires ${requiredConfig.name} plan or higher`,
+          error: 'This feature requires Supportly Creator subscription',
           currentTier,
-          requiredTier: minTierName,
+          requiredTier: 'paid',
           upgradeUrl: `/pricing`,
-          price: requiredConfig.price
+          price: 24.95,
+          message: 'Upgrade to Supportly Creator for just $24.95/year to unlock all features!'
         });
       }
 
