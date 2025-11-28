@@ -95,6 +95,8 @@ function App() {
       setCurrentPage('donors');
     } else if (path === '/email-settings') {
       setCurrentPage('email-settings');
+    } else if (path === '/newsletters') {
+      setCurrentPage('newsletters');
     } else if (path === '/pricing') {
       setCurrentPage('pricing');
     } else {
@@ -124,6 +126,7 @@ function App() {
         {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
         {currentPage === 'payment-settings' && <PaymentSettingsPage navigate={navigate} />}
         {currentPage === 'email-settings' && <EmailSettingsPage navigate={navigate} />}
+        {currentPage === 'newsletters' && <NewslettersPage navigate={navigate} />}
         {currentPage === 'donors' && <DonorsPage navigate={navigate} />}
         {currentPage === 'creator' && <CreatorPage username={creatorUsername} navigate={navigate} />}
       </div>
@@ -1424,6 +1427,12 @@ function DashboardPage({ navigate }) {
             💳 Payment Settings
           </button>
           <button
+            onClick={() => navigate('newsletters')}
+            style={{ padding: '10px 20px', backgroundColor: '#6f42c1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            📧 Newsletters
+          </button>
+          <button
             onClick={() => navigate('email-settings')}
             style={{ padding: '10px 20px', backgroundColor: '#ffc107', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
           >
@@ -2720,6 +2729,413 @@ function DonorsPage({ navigate }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Newsletters Page Component
+function NewslettersPage({ navigate }) {
+  const { user } = useContext(AuthContext);
+  const [newsletters, setNewsletters] = useState([]);
+  const [subscribers, setSubscribers] = useState([]);
+  const [showComposer, setShowComposer] = useState(false);
+  const [currentNewsletter, setCurrentNewsletter] = useState(null);
+
+  // Form state
+  const [subject, setSubject] = useState('');
+  const [content, setContent] = useState('');
+  const [sendTo, setSendTo] = useState('all');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchNewsletters();
+      fetchSubscribers();
+    }
+  }, [user]);
+
+  const fetchNewsletters = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/newsletters/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setNewsletters(data.newsletters || []);
+      }
+    } catch (error) {
+      console.error('Error fetching newsletters:', error);
+    }
+  };
+
+  const fetchSubscribers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/community/subscribers/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSubscribers(data.subscribers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching subscribers:', error);
+    }
+  };
+
+  const createNewsletter = () => {
+    setCurrentNewsletter(null);
+    setSubject('');
+    setContent('');
+    setSendTo('all');
+    setShowComposer(true);
+  };
+
+  const saveNewsletter = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/newsletters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorId: user.id,
+          subject,
+          contentHtml: content,
+          sendTo
+        })
+      });
+
+      if (response.ok) {
+        alert('Newsletter saved as draft!');
+        setShowComposer(false);
+        fetchNewsletters();
+      } else {
+        const data = await response.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Error saving newsletter: ' + error.message);
+    }
+  };
+
+  const sendNewsletter = async (newsletterId) => {
+    if (!confirm('Are you sure you want to send this newsletter to all subscribers?')) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      const response = await fetch(`${API_URL}/api/newsletters/${newsletterId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Newsletter sent successfully to ${data.sent} subscribers!`);
+        fetchNewsletters();
+      } else {
+        const data = await response.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Error sending newsletter: ' + error.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const deleteNewsletter = async (newsletterId) => {
+    if (!confirm('Are you sure you want to delete this draft?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/newsletters/${newsletterId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert('Newsletter deleted');
+        fetchNewsletters();
+      } else {
+        const data = await response.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Error deleting newsletter: ' + error.message);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Please sign in to access newsletters.</p>
+        <button onClick={() => navigate('signup')}>Go to Signup</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <div>
+          <h1>📧 Newsletter Management</h1>
+          <p style={{ color: '#666' }}>{subscribers.length} active subscribers</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => navigate('dashboard')}
+            style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            ← Back to Dashboard
+          </button>
+          <button
+            onClick={createNewsletter}
+            style={{ padding: '10px 20px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+          >
+            ✏️ Create Newsletter
+          </button>
+        </div>
+      </header>
+
+      {/* Composer Modal */}
+      {showComposer && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '20px',
+          overflow: 'auto'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '40px',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h2 style={{ marginBottom: '20px' }}>Create Newsletter</h2>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Subject Line</label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Enter email subject..."
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Send To</label>
+              <select
+                value={sendTo}
+                onChange={(e) => setSendTo(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd'
+                }}
+              >
+                <option value="all">All Subscribers ({subscribers.length})</option>
+                <option value="verified_only">Verified Only</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Content</label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your newsletter content here... You can use {{subscriber_name}} and {{creator_name}} as placeholders."
+                rows={15}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  borderRadius: '6px',
+                  border: '1px solid #ddd',
+                  fontFamily: 'monospace'
+                }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                Available variables: <code>{'{{subscriber_name}}'}</code>, <code>{'{{creator_name}}'}</code>, <code>{'{{unsubscribe_link}}'}</code>
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={saveNewsletter}
+                disabled={!subject || !content}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: subject && content ? '#28a745' : '#ccc',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: subject && content ? 'pointer' : 'not-allowed',
+                  fontWeight: '600'
+                }}
+              >
+                💾 Save Draft
+              </button>
+              <button
+                onClick={() => setShowComposer(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Newsletters List */}
+      <div>
+        <h2 style={{ marginBottom: '20px' }}>Your Newsletters</h2>
+        {newsletters.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>📧</div>
+            <h3 style={{ marginBottom: '10px' }}>No newsletters yet</h3>
+            <p style={{ color: '#666', marginBottom: '20px' }}>Create your first newsletter to engage with your subscribers!</p>
+            <button
+              onClick={createNewsletter}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#667eea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}
+            >
+              Create First Newsletter
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {newsletters.map(newsletter => (
+              <div key={newsletter.id} style={{
+                backgroundColor: 'white',
+                padding: '24px',
+                borderRadius: '12px',
+                border: '1px solid #e0e0e0',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, marginBottom: '8px' }}>{newsletter.subject}</h3>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '14px', color: '#666' }}>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: newsletter.status === 'draft' ? '#ffc107' :
+                                         newsletter.status === 'sent' ? '#28a745' :
+                                         newsletter.status === 'sending' ? '#17a2b8' : '#dc3545',
+                        color: 'white',
+                        fontWeight: '600',
+                        fontSize: '12px'
+                      }}>
+                        {newsletter.status.toUpperCase()}
+                      </span>
+                      <span>Created: {new Date(newsletter.created_at).toLocaleDateString()}</span>
+                      {newsletter.sent_at && <span>Sent: {new Date(newsletter.sent_at).toLocaleDateString()}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {newsletter.status === 'draft' && (
+                      <>
+                        <button
+                          onClick={() => sendNewsletter(newsletter.id)}
+                          disabled={sending}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#667eea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: sending ? 'not-allowed' : 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          {sending ? 'Sending...' : '📤 Send'}
+                        </button>
+                        <button
+                          onClick={() => deleteNewsletter(newsletter.id)}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {newsletter.status === 'sent' && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: '#667eea' }}>{newsletter.total_sent || 0}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Sent</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: '#28a745' }}>{newsletter.total_opened || 0}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Opened</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: '#17a2b8' }}>{newsletter.open_rate || 0}%</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Open Rate</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffc107' }}>{newsletter.total_clicked || 0}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Clicked</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
