@@ -1178,6 +1178,165 @@ app.post('/api/community/unsubscribe', async (req, res) => {
 });
 
 // =====================================================
+// QR CODE ENDPOINTS
+// =====================================================
+
+const QRCode = require('qrcode');
+
+// Generate QR code for donations
+app.post('/api/qr-codes', async (req, res) => {
+  try {
+    const { creatorId, paymentMethod, amount, description } = req.body;
+
+    if (!creatorId || !paymentMethod) {
+      return res.status(400).json({ error: 'Creator ID and payment method are required' });
+    }
+
+    // Get creator info
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('username, display_name')
+      .eq('id', creatorId)
+      .single();
+
+    if (!creator) {
+      return res.status(404).json({ error: 'Creator not found' });
+    }
+
+    // Generate unique QR code ID
+    const qrCodeId = `QR-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    // Create donation page URL
+    const pageUrl = `${process.env.FRONTEND_URL}/@${creator.username}${amount ? `?amount=${amount}` : ''}${paymentMethod ? `&method=${paymentMethod}` : ''}`;
+
+    // Generate QR code image (base64 data URL)
+    const qrImageUrl = await QRCode.toDataURL(pageUrl, {
+      errorCorrectionLevel: 'H',
+      type: 'image/png',
+      quality: 0.92,
+      margin: 1,
+      width: 400,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+
+    // Save to database
+    const { data, error} = await supabase
+      .from('donation_qr_codes')
+      .insert([{
+        creator_id: creatorId,
+        qr_code_id: qrCodeId,
+        payment_method: paymentMethod,
+        amount: amount || null,
+        description: description || null,
+        qr_image_url: qrImageUrl,
+        page_url: pageUrl,
+        is_active: true
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({ qrCode: data });
+  } catch (error) {
+    console.error('Create QR code error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all QR codes for a creator
+app.get('/api/qr-codes/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    const { data, error } = await supabase
+      .from('donation_qr_codes')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ qrCodes: data });
+  } catch (error) {
+    console.error('Get QR codes error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update QR code
+app.put('/api/qr-codes/:qrCodeId', async (req, res) => {
+  try {
+    const { qrCodeId } = req.params;
+    const { isActive, description } = req.body;
+
+    const { data, error } = await supabase
+      .from('donation_qr_codes')
+      .update({
+        is_active: isActive,
+        description: description
+      })
+      .eq('id', qrCodeId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ qrCode: data });
+  } catch (error) {
+    console.error('Update QR code error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete QR code
+app.delete('/api/qr-codes/:qrCodeId', async (req, res) => {
+  try {
+    const { qrCodeId } = req.params;
+
+    const { data, error } = await supabase
+      .from('donation_qr_codes')
+      .delete()
+      .eq('id', qrCodeId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'QR code not found' });
+      }
+      throw error;
+    }
+
+    res.json({ message: 'QR code deleted', qrCode: data });
+  } catch (error) {
+    console.error('Delete QR code error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Track QR code scan (public endpoint)
+app.post('/api/qr-codes/:qrCodeId/scan', async (req, res) => {
+  try {
+    const { qrCodeId } = req.params;
+
+    // Increment scan count
+    const { data, error } = await supabase
+      .rpc('increment_qr_scan', { qr_code_id_param: qrCodeId });
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Track QR scan error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // DONATION ENDPOINTS
 // =====================================================
 
