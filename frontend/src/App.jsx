@@ -143,7 +143,8 @@ function LandingPage({ navigate }) {
     <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ textAlign: 'center', marginBottom: '60px' }}>
         <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Supportly</h1>
-        <p style={{ fontSize: '24px', color: '#666' }}>Accept crypto donations with ease on Algorand</p>
+        <p style={{ fontSize: '24px', color: '#666' }}>Accept donations with zero platform fees</p>
+        <p style={{ fontSize: '18px', color: '#888', marginTop: '10px' }}>PayPal • Stripe • Cash App • Crypto (USDC)</p>
       </header>
 
       <section style={{ textAlign: 'center', marginBottom: '60px' }}>
@@ -169,12 +170,34 @@ function LandingPage({ navigate }) {
           <p>Get your donation page up and running in minutes</p>
         </div>
         <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
-          <h3>💰 USDC Donations</h3>
-          <p>Accept stable cryptocurrency donations on Algorand</p>
+          <h3>💳 Multiple Payment Methods</h3>
+          <p>Accept PayPal, Stripe, Cash App, and crypto - all in one place</p>
         </div>
         <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
           <h3>📊 Analytics</h3>
           <p>Track your donations and supporter engagement</p>
+        </div>
+      </section>
+
+      <section style={{ marginTop: '80px', padding: '40px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '32px' }}>Why Creators Love Supportly</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '30px' }}>
+          <div>
+            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>💰 Zero Platform Fees</h4>
+            <p style={{ color: '#666' }}>Payments go directly to your own accounts - we never touch your money</p>
+          </div>
+          <div>
+            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>🎛️ Full Control</h4>
+            <p style={{ color: '#666' }}>Toggle payment methods on/off, use your own email service</p>
+          </div>
+          <div>
+            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>👥 No Donor Accounts Required</h4>
+            <p style={{ color: '#666' }}>Your supporters can donate anonymously without creating accounts</p>
+          </div>
+          <div>
+            <h4 style={{ fontSize: '20px', marginBottom: '10px' }}>📧 Manage Your Community</h4>
+            <p style={{ color: '#666' }}>Export donor data for taxes, send newsletters to your supporters</p>
+          </div>
         </div>
       </section>
     </div>
