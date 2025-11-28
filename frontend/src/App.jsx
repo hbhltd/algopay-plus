@@ -3451,10 +3451,52 @@ function CreatorPage({ username, navigate }) {
     );
   }
 
+  // Check if creator account is suspended or pending payment
+  const isSuspended = creator.account_status === 'suspended' || creator.account_status === 'pending_payment';
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', display: 'flex', flexDirection: 'column' }}>
+      {/* Suspension Notice Banner */}
+      {isSuspended && (
+        <div style={{
+          backgroundColor: '#FEF3C7',
+          borderBottom: '3px solid #F59E0B',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ fontSize: '32px', marginBottom: '10px' }}>⚠️</div>
+            <h2 style={{
+              fontSize: '24px',
+              color: '#92400E',
+              marginBottom: '8px',
+              fontWeight: '600'
+            }}>
+              Creator Will Return Shortly
+            </h2>
+            <p style={{
+              fontSize: '16px',
+              color: '#78350F',
+              margin: 0
+            }}>
+              Updates in progress. This page will be back soon!
+            </p>
+            {creator.account_status === 'pending_payment' && (
+              <p style={{
+                fontSize: '14px',
+                color: '#78350F',
+                marginTop: '8px',
+                fontStyle: 'italic'
+              }}>
+                (Account subscription renewal pending)
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div style={{ flex: 1, padding: '40px 20px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, padding: '40px 20px', maxWidth: '600px', margin: '0 auto', width: '100%', opacity: isSuspended ? '0.5' : '1' }}>
         {/* Creator Profile */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           {creator.avatar_url && (
@@ -3857,21 +3899,21 @@ function CreatorPage({ username, navigate }) {
           {/* Donate Button */}
           <button
             onClick={handleDonate}
-            disabled={processing || !donationAmount}
+            disabled={processing || !donationAmount || isSuspended}
             style={{
               width: '100%',
               padding: '18px',
               fontSize: '20px',
               fontWeight: 'bold',
-              backgroundColor: processing || !donationAmount ? '#ccc' : '#FFDD00',
+              backgroundColor: processing || !donationAmount || isSuspended ? '#ccc' : '#FFDD00',
               color: '#000',
               border: 'none',
               borderRadius: '12px',
-              cursor: processing || !donationAmount ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 12px rgba(255, 221, 0, 0.3)'
+              cursor: processing || !donationAmount || isSuspended ? 'not-allowed' : 'pointer',
+              boxShadow: isSuspended ? 'none' : '0 4px 12px rgba(255, 221, 0, 0.3)'
             }}
           >
-            {processing ? 'Processing...' : `Support with $${donationAmount || '0'}`}
+            {isSuspended ? 'Page Temporarily Unavailable' : processing ? 'Processing...' : `Support with $${donationAmount || '0'}`}
           </button>
         </div>
       </div>
