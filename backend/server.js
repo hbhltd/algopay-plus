@@ -21,6 +21,14 @@ const {
 const subscriptionRoutes = require('./subscription-api');
 const { initializeRenewalCronJobs } = require('./subscription-renewals');
 
+// Import Discord routes
+const discordRoutes = require('./discord-api');
+const { sendDonationNotification: sendDiscordDonationNotification } = require('./discord-service');
+
+// Import Zapier routes
+const zapierRoutes = require('./zapier-api');
+const { sendEventToZapier } = require('./zapier-service');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -33,6 +41,12 @@ app.use(express.json());
 
 // Subscription routes
 app.use('/api/subscriptions', subscriptionRoutes);
+
+// Discord routes
+app.use('/api/discord', discordRoutes);
+
+// Zapier routes
+app.use('/api/zapier', zapierRoutes);
 
 // Initialize services
 const supabase = createClient(
@@ -837,6 +851,26 @@ app.post('/api/donations', async (req, res) => {
     } catch (webhookError) {
       // Don't fail the donation if webhook fails
       console.error('Webhook trigger error:', webhookError);
+    }
+
+    // Send Discord notification if enabled
+    try {
+      setImmediate(async () => {
+        await sendDiscordDonationNotification(creatorId, data);
+      });
+    } catch (discordError) {
+      // Don't fail the donation if Discord notification fails
+      console.error('Discord notification error:', discordError);
+    }
+
+    // Send Zapier event if enabled
+    try {
+      setImmediate(async () => {
+        await sendEventToZapier(creatorId, 'new_donation', data);
+      });
+    } catch (zapierError) {
+      // Don't fail the donation if Zapier event fails
+      console.error('Zapier event error:', zapierError);
     }
 
     res.json(data);
