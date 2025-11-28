@@ -2816,7 +2816,7 @@ function NewslettersPage({ navigate }) {
   };
 
   const sendNewsletter = async (newsletterId) => {
-    if (!confirm('Are you sure you want to send this newsletter to all subscribers?')) {
+    if (!window.confirm('Are you sure you want to send this newsletter to all subscribers?')) {
       return;
     }
 
@@ -2843,7 +2843,7 @@ function NewslettersPage({ navigate }) {
   };
 
   const deleteNewsletter = async (newsletterId) => {
-    if (!confirm('Are you sure you want to delete this draft?')) {
+    if (!window.confirm('Are you sure you want to delete this draft?')) {
       return;
     }
 
