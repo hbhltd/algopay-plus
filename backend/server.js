@@ -382,6 +382,100 @@ app.post('/api/paypal/capture-order', async (req, res) => {
 });
 
 // =====================================================
+// EMAIL SETTINGS ENDPOINTS
+// =====================================================
+
+// Get email settings for a creator
+app.get('/api/email-settings/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    let { data: settings } = await supabase
+      .from('email_settings')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .single();
+
+    // Create default settings if none exist
+    if (!settings) {
+      const { data: newSettings } = await supabase
+        .from('email_settings')
+        .insert({ creator_id: creatorId, email_provider: 'supportly' })
+        .select()
+        .single();
+      settings = newSettings;
+    }
+
+    // Don't send secret keys to frontend
+    const safeSettings = {
+      ...settings,
+      smtp_password: settings.smtp_password ? '***hidden***' : null,
+      sendgrid_api_key: settings.sendgrid_api_key ? '***hidden***' : null,
+      resend_api_key: settings.resend_api_key ? '***hidden***' : null
+    };
+
+    res.json(safeSettings);
+  } catch (error) {
+    console.error('Get email settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update email settings
+app.put('/api/email-settings/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+    const {
+      email_provider,
+      smtp_host,
+      smtp_port,
+      smtp_username,
+      smtp_password,
+      smtp_secure,
+      sendgrid_api_key,
+      resend_api_key,
+      from_email,
+      from_name
+    } = req.body;
+
+    // Build update object
+    const updates = {};
+    if (email_provider) updates.email_provider = email_provider;
+    if (smtp_host) updates.smtp_host = smtp_host;
+    if (smtp_port) updates.smtp_port = smtp_port;
+    if (smtp_username) updates.smtp_username = smtp_username;
+    if (smtp_password && smtp_password !== '***hidden***') updates.smtp_password = smtp_password;
+    if (smtp_secure !== undefined) updates.smtp_secure = smtp_secure;
+    if (sendgrid_api_key && sendgrid_api_key !== '***hidden***') updates.sendgrid_api_key = sendgrid_api_key;
+    if (resend_api_key && resend_api_key !== '***hidden***') updates.resend_api_key = resend_api_key;
+    if (from_email) updates.from_email = from_email;
+    if (from_name) updates.from_name = from_name;
+
+    const { data, error } = await supabase
+      .from('email_settings')
+      .update(updates)
+      .eq('creator_id', creatorId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Don't send secrets back
+    const safeData = {
+      ...data,
+      smtp_password: data.smtp_password ? '***hidden***' : null,
+      sendgrid_api_key: data.sendgrid_api_key ? '***hidden***' : null,
+      resend_api_key: data.resend_api_key ? '***hidden***' : null
+    };
+
+    res.json(safeData);
+  } catch (error) {
+    console.error('Update email settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // NEWSLETTER ENDPOINTS
 // =====================================================
 

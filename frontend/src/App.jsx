@@ -93,6 +93,8 @@ function App() {
       setCurrentPage('payment-settings');
     } else if (path === '/donors') {
       setCurrentPage('donors');
+    } else if (path === '/email-settings') {
+      setCurrentPage('email-settings');
     } else {
       setCurrentPage('landing');
     }
@@ -118,6 +120,7 @@ function App() {
         {currentPage === 'signup' && <SignupPage navigate={navigate} />}
         {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
         {currentPage === 'payment-settings' && <PaymentSettingsPage navigate={navigate} />}
+        {currentPage === 'email-settings' && <EmailSettingsPage navigate={navigate} />}
         {currentPage === 'donors' && <DonorsPage navigate={navigate} />}
         {currentPage === 'creator' && <CreatorPage username={creatorUsername} navigate={navigate} />}
       </div>
@@ -425,6 +428,12 @@ function DashboardPage({ navigate }) {
             style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
           >
             💳 Payment Settings
+          </button>
+          <button
+            onClick={() => navigate('email-settings')}
+            style={{ padding: '10px 20px', backgroundColor: '#ffc107', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            📧 Email Settings
           </button>
           <button
             onClick={disconnectWallet}
@@ -925,6 +934,419 @@ function PaymentSettingsPage({ navigate }) {
           }}
         >
           {saving ? 'Saving...' : 'Save Payment Settings'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Email Settings Page Component
+function EmailSettingsPage({ navigate }) {
+  const { user } = useContext(AuthContext);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  const [formData, setFormData] = useState({
+    email_provider: 'supportly',
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_username: '',
+    smtp_password: '',
+    smtp_secure: true,
+    sendgrid_api_key: '',
+    resend_api_key: '',
+    from_email: '',
+    from_name: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchEmailSettings();
+    }
+  }, [user]);
+
+  const fetchEmailSettings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/email-settings/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+        setFormData({
+          email_provider: data.email_provider || 'supportly',
+          smtp_host: data.smtp_host || '',
+          smtp_port: data.smtp_port || 587,
+          smtp_username: data.smtp_username || '',
+          smtp_password: data.smtp_password || '',
+          smtp_secure: data.smtp_secure ?? true,
+          sendgrid_api_key: data.sendgrid_api_key || '',
+          resend_api_key: data.resend_api_key || '',
+          from_email: data.from_email || '',
+          from_name: data.from_name || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching email settings:', error);
+      setMessage({ type: 'error', text: 'Failed to load email settings' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch(`${API_URL}/api/email-settings/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      const data = await response.json();
+      setSettings(data);
+      setMessage({ type: 'success', text: 'Email settings saved successfully!' });
+
+      // Refresh the form with updated data (to handle hidden keys)
+      await fetchEmailSettings();
+    } catch (error) {
+      console.error('Error saving email settings:', error);
+      setMessage({ type: 'error', text: 'Failed to save email settings' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>Please sign up or connect your wallet to access email settings.</p>
+        <button onClick={() => navigate('signup')} style={{ marginTop: '20px', padding: '10px 20px' }}>
+          Go to Signup
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading email settings...</div>;
+  }
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '900px', margin: '0 auto' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <h1>Email Settings</h1>
+        <button
+          onClick={() => navigate('dashboard')}
+          style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+        >
+          ← Back to Dashboard
+        </button>
+      </header>
+
+      {message.text && (
+        <div style={{
+          padding: '12px 20px',
+          marginBottom: '30px',
+          backgroundColor: message.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: message.type === 'success' ? '#155724' : '#721c24',
+          borderRadius: '6px',
+          border: `1px solid ${message.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
+        }}>
+          {message.text}
+        </div>
+      )}
+
+      <p style={{ marginBottom: '30px', color: '#666', fontSize: '16px' }}>
+        Configure your own email service to send newsletters and donation receipts from your email address. All emails will come from your domain, not Supportly.
+      </p>
+
+      {/* Email Provider Selection */}
+      <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <h3 style={{ marginBottom: '20px' }}>Email Service Provider</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', padding: '15px', border: `2px solid ${formData.email_provider === 'supportly' ? '#007bff' : '#ddd'}`, borderRadius: '6px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="email_provider"
+              value="supportly"
+              checked={formData.email_provider === 'supportly'}
+              onChange={(e) => setFormData({ ...formData, email_provider: e.target.value })}
+              style={{ marginRight: '10px' }}
+            />
+            <div>
+              <strong>Supportly (Default)</strong>
+              <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>Use Supportly's email service - no configuration needed</p>
+            </div>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', padding: '15px', border: `2px solid ${formData.email_provider === 'smtp' ? '#007bff' : '#ddd'}`, borderRadius: '6px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="email_provider"
+              value="smtp"
+              checked={formData.email_provider === 'smtp'}
+              onChange={(e) => setFormData({ ...formData, email_provider: e.target.value })}
+              style={{ marginRight: '10px' }}
+            />
+            <div>
+              <strong>SMTP (Gmail, Outlook, Custom)</strong>
+              <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>Use your own SMTP server</p>
+            </div>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', padding: '15px', border: `2px solid ${formData.email_provider === 'sendgrid' ? '#007bff' : '#ddd'}`, borderRadius: '6px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="email_provider"
+              value="sendgrid"
+              checked={formData.email_provider === 'sendgrid'}
+              onChange={(e) => setFormData({ ...formData, email_provider: e.target.value })}
+              style={{ marginRight: '10px' }}
+            />
+            <div>
+              <strong>SendGrid</strong>
+              <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>Professional email delivery service</p>
+            </div>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', padding: '15px', border: `2px solid ${formData.email_provider === 'resend' ? '#007bff' : '#ddd'}`, borderRadius: '6px', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="email_provider"
+              value="resend"
+              checked={formData.email_provider === 'resend'}
+              onChange={(e) => setFormData({ ...formData, email_provider: e.target.value })}
+              style={{ marginRight: '10px' }}
+            />
+            <div>
+              <strong>Resend</strong>
+              <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>Modern email API for developers</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* From Email Configuration */}
+      <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <h3 style={{ marginBottom: '20px' }}>From Address</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+            From Email
+          </label>
+          <input
+            type="email"
+            value={formData.from_email}
+            onChange={(e) => setFormData({ ...formData, from_email: e.target.value })}
+            placeholder="you@yourdomain.com"
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '14px',
+              borderRadius: '4px',
+              border: '1px solid #ddd'
+            }}
+          />
+        </div>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+            From Name
+          </label>
+          <input
+            type="text"
+            value={formData.from_name}
+            onChange={(e) => setFormData({ ...formData, from_name: e.target.value })}
+            placeholder="Your Name"
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '14px',
+              borderRadius: '4px',
+              border: '1px solid #ddd'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* SMTP Configuration */}
+      {formData.email_provider === 'smtp' && (
+        <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '20px' }}>SMTP Configuration</h3>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+              SMTP Host
+            </label>
+            <input
+              type="text"
+              value={formData.smtp_host}
+              onChange={(e) => setFormData({ ...formData, smtp_host: e.target.value })}
+              placeholder="smtp.gmail.com"
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+              SMTP Port
+            </label>
+            <input
+              type="number"
+              value={formData.smtp_port}
+              onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) })}
+              placeholder="587"
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+              Username (Email)
+            </label>
+            <input
+              type="text"
+              value={formData.smtp_username}
+              onChange={(e) => setFormData({ ...formData, smtp_username: e.target.value })}
+              placeholder="you@gmail.com"
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+              Password (App Password for Gmail)
+            </label>
+            <input
+              type="password"
+              value={formData.smtp_password}
+              onChange={(e) => setFormData({ ...formData, smtp_password: e.target.value })}
+              placeholder={formData.smtp_password === '***hidden***' ? 'Password is set (enter new to change)' : 'Your password'}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+
+          <div style={{ padding: '12px', backgroundColor: '#e7f3ff', borderRadius: '6px', fontSize: '13px', color: '#004085' }}>
+            <strong>Gmail Setup:</strong><br />
+            1. Go to Google Account Settings → Security<br />
+            2. Enable 2-Step Verification<br />
+            3. Create an App Password<br />
+            4. Use that App Password here (not your Gmail password)
+          </div>
+        </div>
+      )}
+
+      {/* SendGrid Configuration */}
+      {formData.email_provider === 'sendgrid' && (
+        <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '20px' }}>SendGrid API Key</h3>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+              API Key
+            </label>
+            <input
+              type="password"
+              value={formData.sendgrid_api_key}
+              onChange={(e) => setFormData({ ...formData, sendgrid_api_key: e.target.value })}
+              placeholder={formData.sendgrid_api_key === '***hidden***' ? 'Key is set (enter new to change)' : 'SG.xxxxxxxxxx'}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+          <div style={{ padding: '12px', backgroundColor: '#e7f3ff', borderRadius: '6px', fontSize: '13px', color: '#004085' }}>
+            <strong>How to get SendGrid API key:</strong><br />
+            1. Create account at <a href="https://sendgrid.com" target="_blank" rel="noopener noreferrer">sendgrid.com</a><br />
+            2. Go to Settings → API Keys<br />
+            3. Create new API key with Full Access<br />
+            4. Copy and paste here
+          </div>
+        </div>
+      )}
+
+      {/* Resend Configuration */}
+      {formData.email_provider === 'resend' && (
+        <div style={{ marginBottom: '30px', padding: '30px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '20px' }}>Resend API Key</h3>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' }}>
+              API Key
+            </label>
+            <input
+              type="password"
+              value={formData.resend_api_key}
+              onChange={(e) => setFormData({ ...formData, resend_api_key: e.target.value })}
+              placeholder={formData.resend_api_key === '***hidden***' ? 'Key is set (enter new to change)' : 're_xxxxxxxxxx'}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            />
+          </div>
+          <div style={{ padding: '12px', backgroundColor: '#e7f3ff', borderRadius: '6px', fontSize: '13px', color: '#004085' }}>
+            <strong>How to get Resend API key:</strong><br />
+            1. Create account at <a href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com</a><br />
+            2. Go to API Keys<br />
+            3. Create new API key<br />
+            4. Copy and paste here
+          </div>
+        </div>
+      )}
+
+      {/* Save Button */}
+      <div style={{ textAlign: 'center', marginTop: '40px' }}>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            padding: '16px 48px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            backgroundColor: saving ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 12px rgba(0,123,255,0.3)'
+          }}
+        >
+          {saving ? 'Saving...' : 'Save Email Settings'}
         </button>
       </div>
     </div>
