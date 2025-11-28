@@ -17,6 +17,10 @@ const {
   exportAnalyticsJSON
 } = require('./analytics');
 
+// Import subscription routes
+const subscriptionRoutes = require('./subscription-api');
+const { initializeRenewalCronJobs } = require('./subscription-renewals');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -26,6 +30,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Subscription routes
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Initialize services
 const supabase = createClient(
@@ -1163,6 +1170,9 @@ app.post('/api/notifications/test', async (req, res) => {
 // =====================================================
 // SCHEDULED JOBS
 // =====================================================
+
+// Initialize subscription renewal cron jobs
+initializeRenewalCronJobs();
 
 // Weekly summary emails (runs every Monday at 9 AM)
 cron.schedule('0 9 * * 1', async () => {
