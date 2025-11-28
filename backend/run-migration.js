@@ -23,7 +23,7 @@ async function runMigration(filename) {
     console.log(`\n📦 Running migration: ${filename}`);
 
     // Read migration file
-    const migrationPath = path.join(__dirname, 'database', 'migrations', filename);
+    const migrationPath = path.join(__dirname, '..', 'database', 'migrations', filename);
     const sql = fs.readFileSync(migrationPath, 'utf8');
 
     // Execute migration
@@ -46,7 +46,7 @@ async function runMigration(filename) {
 async function runAllMigrations() {
   console.log('🚀 Starting database migrations...\n');
 
-  const migrationsDir = path.join(__dirname, 'database', 'migrations');
+  const migrationsDir = path.join(__dirname, '..', 'database', 'migrations');
 
   // Check if migrations directory exists
   if (!fs.existsSync(migrationsDir)) {

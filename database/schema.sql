@@ -23,6 +23,10 @@ CREATE TABLE creators (
   subscription_tier TEXT DEFAULT 'basic',
   subscription_expires_at TIMESTAMP,
   is_active BOOLEAN DEFAULT true,
+  account_status TEXT DEFAULT 'active' CHECK (account_status IN ('active', 'suspended', 'pending_payment')),
+  suspension_reason TEXT,
+  last_payment_check TIMESTAMP,
+  payment_retry_count INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -31,6 +35,8 @@ CREATE TABLE creators (
 CREATE INDEX idx_creators_username ON creators(username);
 CREATE INDEX idx_creators_wallet ON creators(wallet_address);
 CREATE INDEX idx_creators_active ON creators(is_active);
+CREATE INDEX idx_creators_account_status ON creators(account_status);
+CREATE INDEX idx_creators_payment_check ON creators(last_payment_check);
 
 -- =====================================================
 -- DONATIONS TABLE
@@ -174,6 +180,24 @@ CREATE TABLE email_preferences (
 );
 
 -- =====================================================
+-- ACCOUNT STATUS HISTORY TABLE
+-- =====================================================
+CREATE TABLE account_status_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  creator_id UUID REFERENCES creators(id) ON DELETE CASCADE,
+  old_status TEXT,
+  new_status TEXT NOT NULL,
+  reason TEXT,
+  changed_by TEXT, -- 'system' or admin user ID
+  metadata JSONB, -- Additional context like payment details, admin notes, etc.
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for account status history
+CREATE INDEX idx_account_status_history_creator ON account_status_history(creator_id);
+CREATE INDEX idx_account_status_history_created ON account_status_history(created_at DESC);
+
+-- =====================================================
 -- FUNCTIONS AND TRIGGERS
 -- =====================================================
 
@@ -204,6 +228,41 @@ BEFORE UPDATE ON content
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
+-- Function to automatically log account status changes
+CREATE OR REPLACE FUNCTION log_account_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Only log if account_status actually changed
+  IF (OLD.account_status IS DISTINCT FROM NEW.account_status) THEN
+    INSERT INTO account_status_history (
+      creator_id,
+      old_status,
+      new_status,
+      reason,
+      changed_by,
+      metadata
+    ) VALUES (
+      NEW.id,
+      OLD.account_status,
+      NEW.account_status,
+      NEW.suspension_reason,
+      'system',
+      jsonb_build_object(
+        'payment_retry_count', NEW.payment_retry_count,
+        'last_payment_check', NEW.last_payment_check
+      )
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically log status changes
+CREATE TRIGGER log_creator_status_change
+AFTER UPDATE ON creators
+FOR EACH ROW
+EXECUTE FUNCTION log_account_status_change();
+
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- =====================================================
@@ -216,6 +275,7 @@ ALTER TABLE nfts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_status_history ENABLE ROW LEVEL SECURITY;
 
 -- Public read access to creators (for donation pages)
 CREATE POLICY "Creators are viewable by everyone"
@@ -253,6 +313,11 @@ ON content FOR SELECT
 USING (NOT is_gated OR creator_id IN (
   SELECT creator_id FROM nfts WHERE owner_wallet = auth.uid()::text
 ));
+
+-- Creators can view their own status history
+CREATE POLICY "Creators can view own status history"
+ON account_status_history FOR SELECT
+USING (auth.uid()::text = creator_id::text);
 
 -- =====================================================
 -- SAMPLE DATA (Optional - for testing)
@@ -298,6 +363,7 @@ COMMENT ON TABLE subscriptions IS 'Creator subscription payments to use the plat
 COMMENT ON TABLE content IS 'Content uploads for gating features';
 COMMENT ON TABLE analytics_events IS 'Detailed event tracking for analytics';
 COMMENT ON TABLE email_preferences IS 'Email notification preferences for creators';
+COMMENT ON TABLE account_status_history IS 'Audit log of all account status changes for creators';
 
 -- =====================================================
 -- GRANTS (Adjust based on your Supabase setup)
