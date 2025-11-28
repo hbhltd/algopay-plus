@@ -382,6 +382,205 @@ app.post('/api/paypal/capture-order', async (req, res) => {
 });
 
 // =====================================================
+// WEBHOOK SETTINGS ENDPOINTS
+// =====================================================
+
+// Get webhook settings for a creator
+app.get('/api/webhook-settings/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    let { data: settings } = await supabase
+      .from('webhook_settings')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .single();
+
+    // Create default settings if none exist
+    if (!settings) {
+      const { data: newSettings } = await supabase
+        .from('webhook_settings')
+        .insert({ creator_id: creatorId, webhook_enabled: false })
+        .select()
+        .single();
+      settings = newSettings;
+    }
+
+    // Don't send secret to frontend
+    const safeSettings = {
+      ...settings,
+      webhook_secret: settings.webhook_secret ? '***hidden***' : null
+    };
+
+    res.json(safeSettings);
+  } catch (error) {
+    console.error('Get webhook settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update webhook settings
+app.put('/api/webhook-settings/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+    const {
+      webhook_enabled,
+      webhook_url,
+      webhook_secret,
+      on_new_donation,
+      on_monthly_total
+    } = req.body;
+
+    // Build update object
+    const updates = {};
+    if (webhook_enabled !== undefined) updates.webhook_enabled = webhook_enabled;
+    if (webhook_url) updates.webhook_url = webhook_url;
+    if (webhook_secret && webhook_secret !== '***hidden***') updates.webhook_secret = webhook_secret;
+    if (on_new_donation !== undefined) updates.on_new_donation = on_new_donation;
+    if (on_monthly_total !== undefined) updates.on_monthly_total = on_monthly_total;
+
+    const { data, error } = await supabase
+      .from('webhook_settings')
+      .update(updates)
+      .eq('creator_id', creatorId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Don't send secret back
+    const safeData = {
+      ...data,
+      webhook_secret: data.webhook_secret ? '***hidden***' : null
+    };
+
+    res.json(safeData);
+  } catch (error) {
+    console.error('Update webhook settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test webhook
+app.post('/api/webhook-settings/:creatorId/test', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+
+    // Get webhook settings
+    const { data: settings } = await supabase
+      .from('webhook_settings')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .single();
+
+    if (!settings || !settings.webhook_url) {
+      return res.status(400).json({ error: 'Webhook URL not configured' });
+    }
+
+    // Send test webhook
+    const testPayload = {
+      event: 'test',
+      timestamp: new Date().toISOString(),
+      data: {
+        message: 'This is a test webhook from Supportly'
+      }
+    };
+
+    const webhookResponse = await triggerWebhook(
+      settings.webhook_url,
+      settings.webhook_secret,
+      testPayload,
+      creatorId
+    );
+
+    res.json({
+      success: webhookResponse.success,
+      status: webhookResponse.status,
+      message: webhookResponse.success ? 'Test webhook sent successfully!' : 'Test webhook failed'
+    });
+  } catch (error) {
+    console.error('Test webhook error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get webhook logs
+app.get('/api/webhook-logs/:creatorId', async (req, res) => {
+  try {
+    const { creatorId } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const { data: logs, error } = await supabase
+      .from('webhook_logs')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    res.json(logs || []);
+  } catch (error) {
+    console.error('Get webhook logs error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Webhook trigger function
+async function triggerWebhook(webhookUrl, secret, payload, creatorId, donationId = null) {
+  try {
+    // Add signature header if secret is provided
+    const headers = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Supportly-Webhook/1.0'
+    };
+
+    if (secret) {
+      // Create HMAC signature
+      const crypto = require('crypto');
+      const signature = crypto
+        .createHmac('sha256', secret)
+        .update(JSON.stringify(payload))
+        .digest('hex');
+      headers['X-Supportly-Signature'] = signature;
+    }
+
+    // Send webhook
+    const response = await axios.post(webhookUrl, payload, {
+      headers,
+      timeout: 10000 // 10 second timeout
+    });
+
+    // Log successful webhook
+    await supabase.from('webhook_logs').insert({
+      creator_id: creatorId,
+      donation_id: donationId,
+      webhook_url: webhookUrl,
+      payload,
+      response_status: response.status,
+      response_body: JSON.stringify(response.data).slice(0, 1000),
+      success: true
+    });
+
+    return { success: true, status: response.status };
+  } catch (error) {
+    // Log failed webhook
+    await supabase.from('webhook_logs').insert({
+      creator_id: creatorId,
+      donation_id: donationId,
+      webhook_url: webhookUrl,
+      payload,
+      response_status: error.response?.status || 0,
+      response_body: error.response?.data ? JSON.stringify(error.response.data).slice(0, 1000) : null,
+      success: false,
+      error_message: error.message
+    });
+
+    return { success: false, status: error.response?.status || 0, error: error.message };
+  }
+}
+
+// =====================================================
 // EMAIL SETTINGS ENDPOINTS
 // =====================================================
 
@@ -591,6 +790,47 @@ app.post('/api/donations', async (req, res) => {
 
     // Check if eligible for NFT
     await checkAndMintNFT(creatorId, donorWallet, amount);
+
+    // Trigger webhook if enabled
+    try {
+      const { data: webhookSettings } = await supabase
+        .from('webhook_settings')
+        .select('*')
+        .eq('creator_id', creatorId)
+        .single();
+
+      if (webhookSettings?.webhook_enabled && webhookSettings?.on_new_donation && webhookSettings?.webhook_url) {
+        // Don't wait for webhook to complete
+        setImmediate(async () => {
+          await triggerWebhook(
+            webhookSettings.webhook_url,
+            webhookSettings.webhook_secret,
+            {
+              event: 'donation.created',
+              timestamp: new Date().toISOString(),
+              data: {
+                donation_id: data.id,
+                amount: parseFloat(amount),
+                donor_name: donorName || 'Anonymous',
+                donor_email: donorEmail || null,
+                message: message || null,
+                payment_method: paymentMethod,
+                creator: {
+                  id: creatorId,
+                  username: creator.username,
+                  display_name: creator.display_name
+                }
+              }
+            },
+            creatorId,
+            data.id
+          );
+        });
+      }
+    } catch (webhookError) {
+      // Don't fail the donation if webhook fails
+      console.error('Webhook trigger error:', webhookError);
+    }
 
     res.json(data);
   } catch (error) {
