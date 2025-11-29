@@ -17,6 +17,10 @@ const {
   exportAnalyticsJSON
 } = require('./analytics');
 
+// Import bcrypt and jwt for authentication
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -60,10 +64,175 @@ app.get('/health', (req, res) => {
 });
 
 // =====================================================
+// AUTHENTICATION ENDPOINTS
+// =====================================================
+
+// Register with email/password
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const {
+      username,
+      email,
+      password,
+      displayName,
+      bio,
+      walletAddress,
+      twitter,
+      youtube,
+      instagram,
+      tiktok,
+      linkedin,
+      facebook,
+      website,
+      avatar,
+      avatarUrl,
+      stripeAccountId,
+      stripePublishableKey
+    } = req.body;
+
+    // Validate required fields
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    // Check if username or email exists
+    const { data: existing } = await supabase
+      .from('creators')
+      .select('id')
+      .or(`username.eq.${username.toLowerCase()},email.eq.${email}`)
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(400).json({ error: 'Username or email already taken' });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create creator
+    const { data, error } = await supabase
+      .from('creators')
+      .insert([{
+        username: username.toLowerCase(),
+        email,
+        password_hash: passwordHash,
+        display_name: displayName || username,
+        bio,
+        wallet_address: walletAddress || null,
+        twitter_url: twitter,
+        youtube_url: youtube,
+        instagram_url: instagram,
+        tiktok_url: tiktok,
+        linkedin_url: linkedin,
+        facebook_url: facebook,
+        website_url: website,
+        avatar_url: avatarUrl || avatar,
+        stripe_account_id: stripeAccountId || null,
+        stripe_publishable_key: stripePublishableKey || null
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: data.id, username: data.username, email: data.email },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    // Send welcome email
+    if (email) {
+      await sendWelcomeEmail(email, displayName || username, username);
+    }
+
+    res.json({ creator: data, token });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Login with email/password
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Get creator by email
+    const { data: creator, error } = await supabase
+      .from('creators')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !creator) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, creator.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: creator.id, username: creator.username, email: creator.email },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    // Remove password hash from response
+    delete creator.password_hash;
+
+    res.json({ creator, token });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Verify token and get user
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+    const { data: creator, error } = await supabase
+      .from('creators')
+      .select('*')
+      .eq('id', decoded.id)
+      .single();
+
+    if (error || !creator) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // Remove password hash from response
+    delete creator.password_hash;
+
+    res.json(creator);
+  } catch (error) {
+    console.error('Auth verify error:', error);
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// =====================================================
 // CREATOR ENDPOINTS
 // =====================================================
 
-// Create new creator
+// Create new creator (legacy - supports wallet-only auth)
 app.post('/api/creators', async (req, res) => {
   try {
     const {
@@ -74,6 +243,10 @@ app.post('/api/creators', async (req, res) => {
       walletAddress,
       twitter,
       youtube,
+      instagram,
+      tiktok,
+      linkedin,
+      facebook,
       website,
       avatar,
       avatarUrl,
@@ -86,7 +259,7 @@ app.post('/api/creators', async (req, res) => {
       .from('creators')
       .select('id')
       .eq('username', username)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return res.status(400).json({ error: 'Username already taken' });
@@ -100,9 +273,13 @@ app.post('/api/creators', async (req, res) => {
         display_name: displayName,
         bio,
         email,
-        wallet_address: walletAddress,
+        wallet_address: walletAddress || null,
         twitter_url: twitter,
         youtube_url: youtube,
+        instagram_url: instagram,
+        tiktok_url: tiktok,
+        linkedin_url: linkedin,
+        facebook_url: facebook,
         website_url: website,
         avatar_url: avatarUrl || avatar,
         stripe_account_id: stripeAccountId || null,
@@ -565,31 +742,30 @@ app.get('/api/analytics/export/json/:creatorId', async (req, res) => {
 // Create subscription
 app.post('/api/subscriptions/create', async (req, res) => {
   try {
-    const { creatorId, tier, paymentMethod, paymentTxHash } = req.body;
+    const { creatorId, paymentMethod, paymentTxHash } = req.body;
 
-    // Validate tier
-    const validTiers = {
-      basic: { amount: 0, duration: 365 },
-      pro: { amount: 9.99, duration: 30 },
-      premium: { amount: 29.99, duration: 30 }
-    };
+    // Validate payment method
+    const validPaymentMethods = ['stripe', 'usdc', 'pera', 'noah', 'paypal'];
 
-    if (!validTiers[tier]) {
-      return res.status(400).json({ error: 'Invalid subscription tier' });
+    if (!validPaymentMethods.includes(paymentMethod)) {
+      return res.status(400).json({ error: 'Invalid payment method. Must be one of: stripe, usdc, pera, noah, paypal' });
     }
 
-    const tierConfig = validTiers[tier];
+    // Flat annual subscription: $49.95/year
+    const ANNUAL_PRICE = 49.95;
+    const ANNUAL_DURATION_DAYS = 365;
+
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + tierConfig.duration);
+    expiresAt.setDate(expiresAt.getDate() + ANNUAL_DURATION_DAYS);
 
     // Create subscription record
     const { data: subscription, error: subError } = await supabase
       .from('subscriptions')
       .insert([{
         creator_id: creatorId,
-        tier,
+        tier: 'annual',
         status: 'active',
-        amount: tierConfig.amount,
+        amount: ANNUAL_PRICE,
         payment_tx_hash: paymentTxHash,
         starts_at: new Date().toISOString(),
         expires_at: expiresAt.toISOString(),
@@ -600,12 +776,13 @@ app.post('/api/subscriptions/create', async (req, res) => {
 
     if (subError) throw subError;
 
-    // Update creator's subscription info
+    // Update creator's subscription info and payment method preference
     await supabase
       .from('creators')
       .update({
-        subscription_tier: tier,
-        subscription_expires_at: expiresAt.toISOString()
+        subscription_tier: 'annual',
+        subscription_expires_at: expiresAt.toISOString(),
+        subscription_payment_method: paymentMethod
       })
       .eq('id', creatorId);
 

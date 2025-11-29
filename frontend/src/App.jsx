@@ -22,22 +22,46 @@ const AuthContext = createContext();
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accountAddress, setAccountAddress] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
+    // Try to reconnect wallet session
     peraWallet.reconnectSession().then(accounts => {
       if (accounts.length) {
         setAccountAddress(accounts[0]);
-        // Fetch user data if logged in
-        fetchUserData(accounts[0]);
       }
     }).catch(console.error);
+
+    // Try to restore user from token
+    if (token) {
+      fetchUserFromToken();
+    }
   }, []);
+
+  const fetchUserFromToken = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      } else {
+        // Token invalid, clear it
+        localStorage.removeItem('token');
+        setToken(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user from token:', error);
+    }
+  };
 
   const connectWallet = async () => {
     try {
       const accounts = await peraWallet.connect();
       setAccountAddress(accounts[0]);
-      await fetchUserData(accounts[0]);
       return accounts[0];
     } catch (error) {
       console.error('Wallet connection error:', error);
@@ -48,23 +72,66 @@ function AuthProvider({ children }) {
   const disconnectWallet = () => {
     peraWallet.disconnect();
     setAccountAddress(null);
-    setUser(null);
   };
 
-  const fetchUserData = async (address) => {
-    try {
-      const response = await fetch(`${API_URL}/api/creators/by-wallet/${address}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
+  const login = async (email, password) => {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
     }
+
+    const data = await response.json();
+    setUser(data.creator);
+    setToken(data.token);
+    localStorage.setItem('token', data.token);
+    return data;
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    setAccountAddress(null);
+    localStorage.removeItem('token');
+    peraWallet.disconnect();
+  };
+
+  const register = async (formData) => {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Registration failed');
+    }
+
+    const data = await response.json();
+    setUser(data.creator);
+    setToken(data.token);
+    localStorage.setItem('token', data.token);
+    return data;
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, accountAddress, connectWallet, disconnectWallet }}>
+    <AuthContext.Provider value={{
+      user,
+      setUser,
+      accountAddress,
+      token,
+      connectWallet,
+      disconnectWallet,
+      login,
+      logout,
+      register
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -82,6 +149,8 @@ function App() {
       setCreatorUsername(path.slice(2));
     } else if (path === '/signup') {
       setCurrentPage('signup');
+    } else if (path === '/login') {
+      setCurrentPage('login');
     } else if (path === '/dashboard') {
       setCurrentPage('dashboard');
     } else {
@@ -92,7 +161,7 @@ function App() {
   const navigate = (page, username = null) => {
     setCurrentPage(page);
     setCreatorUsername(username);
-    
+
     if (page === 'creator' && username) {
       window.history.pushState({}, '', `/@${username}`);
     } else if (page === 'landing') {
@@ -107,6 +176,7 @@ function App() {
       <div className="App">
         {currentPage === 'landing' && <LandingPage navigate={navigate} />}
         {currentPage === 'signup' && <SignupPage navigate={navigate} />}
+        {currentPage === 'login' && <LoginPage navigate={navigate} />}
         {currentPage === 'dashboard' && <DashboardPage navigate={navigate} />}
         {currentPage === 'creator' && <CreatorPage username={creatorUsername} navigate={navigate} />}
       </div>
@@ -116,37 +186,66 @@ function App() {
 
 // Landing Page Component
 function LandingPage({ navigate }) {
-  const { connectWallet, accountAddress } = useContext(AuthContext);
-
-  const handleGetStarted = async () => {
-    if (!accountAddress) {
-      await connectWallet();
-    }
-    navigate('signup');
-  };
+  const { user } = useContext(AuthContext);
 
   return (
     <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>AlgoPay Plus</h1>
-        <p style={{ fontSize: '24px', color: '#666' }}>Accept crypto donations with ease on Algorand</p>
+        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Supportly</h1>
+        <p style={{ fontSize: '24px', color: '#666' }}>Accept donations and grow your community</p>
+        <p style={{ fontSize: '18px', color: '#888' }}>Only $49.95/year - Multiple payment options available</p>
       </header>
 
       <section style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <button
-          onClick={handleGetStarted}
-          style={{
-            padding: '16px 48px',
-            fontSize: '20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer'
-          }}
-        >
-          Get Started
-        </button>
+        {user ? (
+          <button
+            onClick={() => navigate('dashboard')}
+            style={{
+              padding: '16px 48px',
+              fontSize: '20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginRight: '15px'
+            }}
+          >
+            Go to Dashboard
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => navigate('signup')}
+              style={{
+                padding: '16px 48px',
+                fontSize: '20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                marginRight: '15px'
+              }}
+            >
+              Get Started
+            </button>
+            <button
+              onClick={() => navigate('login')}
+              style={{
+                padding: '16px 48px',
+                fontSize: '20px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Log In
+            </button>
+          </>
+        )}
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', marginTop: '60px' }}>
@@ -155,8 +254,8 @@ function LandingPage({ navigate }) {
           <p>Get your donation page up and running in minutes</p>
         </div>
         <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
-          <h3>💰 USDC Donations</h3>
-          <p>Accept stable cryptocurrency donations on Algorand</p>
+          <h3>💰 Multiple Payment Options</h3>
+          <p>Accept Stripe, PayPal, USDC, Pera, and more</p>
         </div>
         <div style={{ padding: '30px', border: '1px solid #ddd', borderRadius: '8px' }}>
           <h3>📊 Analytics</h3>
@@ -167,17 +266,12 @@ function LandingPage({ navigate }) {
   );
 }
 
-// Signup Page Component
-function SignupPage({ navigate }) {
-  const { connectWallet, accountAddress, setUser } = useContext(AuthContext);
+// Login Page Component
+function LoginPage({ navigate }) {
+  const { login } = useContext(AuthContext);
   const [formData, setFormData] = useState({
-    username: '',
-    displayName: '',
-    bio: '',
     email: '',
-    avatarUrl: '',
-    stripeAccountId: '',
-    stripePublishableKey: ''
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -188,33 +282,7 @@ function SignupPage({ navigate }) {
     setError('');
 
     try {
-      let walletAddress = accountAddress;
-      if (!walletAddress) {
-        walletAddress = await connectWallet();
-      }
-
-      const response = await fetch(`${API_URL}/api/creators`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          displayName: formData.displayName,
-          bio: formData.bio,
-          email: formData.email,
-          avatarUrl: formData.avatarUrl,
-          walletAddress,
-          stripeAccountId: formData.stripeAccountId,
-          stripePublishableKey: formData.stripePublishableKey
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create account');
-      }
-
-      const creator = await response.json();
-      setUser(creator);
+      await login(formData.email, formData.password);
       navigate('dashboard');
     } catch (err) {
       setError(err.message);
@@ -224,168 +292,400 @@ function SignupPage({ navigate }) {
   };
 
   return (
-    <div style={{ padding: '40px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '40px' }}>Create Your Account</h1>
+    <div style={{ padding: '40px', maxWidth: '500px', margin: '0 auto' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '40px' }}>Log In</h1>
 
-      {!accountAddress && (
-        <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px', textAlign: 'center' }}>
-          <p style={{ marginBottom: '15px' }}>First, connect your Algorand wallet</p>
-          <button
-            onClick={connectWallet}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            Connect Pera Wallet
-          </button>
+      {error && (
+        <div style={{ padding: '15px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '6px', marginBottom: '20px' }}>
+          {error}
         </div>
       )}
 
-      {accountAddress && (
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Username*
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
-              placeholder="yourname"
-            />
-          </div>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+            Email*
+          </label>
+          <input
+            type="email"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ddd' }}
+            placeholder="your@email.com"
+          />
+        </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Display Name*
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.displayName}
-              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
-              placeholder="Your Name"
-            />
-          </div>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+            Password*
+          </label>
+          <input
+            type="password"
+            required
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ddd' }}
+            placeholder="••••••••"
+          />
+        </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Bio
-            </label>
-            <textarea
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd', minHeight: '100px' }}
-              placeholder="Tell your supporters about yourself..."
-            />
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '14px',
+            fontSize: '18px',
+            backgroundColor: loading ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            marginTop: '10px'
+          }}
+        >
+          {loading ? 'Logging in...' : 'Log In'}
+        </button>
+      </form>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Logo / Avatar URL (optional)
-            </label>
-            <input
-              type="url"
-              value={formData.avatarUrl}
-              onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
-              placeholder="https://example.com/your-logo.png"
-            />
-            <small style={{ color: '#666', fontSize: '14px' }}>Upload your logo to a service like imgur.com and paste the URL here</small>
-          </div>
-
-          <div style={{ marginTop: '40px', marginBottom: '20px', paddingTop: '20px', borderTop: '2px solid #e0e0e0' }}>
-            <h3 style={{ marginBottom: '15px', fontSize: '18px' }}>Payment Settings (Optional)</h3>
-            <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
-              Configure how you receive payments. Your Algorand wallet is already connected for crypto donations.
-              Add your Stripe account details below to receive card payments directly.
-            </p>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Stripe Account ID (optional)
-            </label>
-            <input
-              type="text"
-              value={formData.stripeAccountId}
-              onChange={(e) => setFormData({ ...formData, stripeAccountId: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
-              placeholder="acct_xxxxxxxxxxxxx"
-            />
-            <small style={{ color: '#666', fontSize: '14px' }}>
-              For Stripe Connect. Leave empty to use platform payments.
-            </small>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Stripe Publishable Key (optional)
-            </label>
-            <input
-              type="text"
-              value={formData.stripePublishableKey}
-              onChange={(e) => setFormData({ ...formData, stripePublishableKey: e.target.value })}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
-              placeholder="pk_xxxxxxxxxxxxx"
-            />
-            <small style={{ color: '#666', fontSize: '14px' }}>
-              Your Stripe publishable key for direct payments.
-            </small>
-          </div>
-
-          {error && (
-            <div style={{ padding: '12px', backgroundColor: '#fee', color: '#c00', borderRadius: '4px', marginBottom: '20px' }}>
-              {error}
-            </div>
-          )}
-
+      <div style={{ textAlign: 'center', marginTop: '30px' }}>
+        <p style={{ color: '#666' }}>
+          Don't have an account?{' '}
           <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              fontSize: '18px',
-              backgroundColor: loading ? '#ccc' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
+            onClick={() => navigate('signup')}
+            style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            Sign up
           </button>
-        </form>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Signup Page Component
+function SignupPage({ navigate }) {
+  const { register, connectWallet, accountAddress } = useContext(AuthContext);
+  const [formData, setFormData] = useState({
+    username: '',
+    displayName: '',
+    bio: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    avatarUrl: '',
+    twitter: '',
+    youtube: '',
+    instagram: '',
+    tiktok: '',
+    linkedin: '',
+    facebook: '',
+    website: '',
+    walletAddress: '',
+    stripeAccountId: '',
+    stripePublishableKey: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPaymentSection, setShowPaymentSection] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      await register({
+        username: formData.username,
+        displayName: formData.displayName,
+        bio: formData.bio,
+        email: formData.email,
+        password: formData.password,
+        avatarUrl: formData.avatarUrl,
+        walletAddress: accountAddress || formData.walletAddress,
+        twitter: formData.twitter,
+        youtube: formData.youtube,
+        instagram: formData.instagram,
+        tiktok: formData.tiktok,
+        linkedin: formData.linkedin,
+        facebook: formData.facebook,
+        website: formData.website,
+        stripeAccountId: formData.stripeAccountId,
+        stripePublishableKey: formData.stripePublishableKey
+      });
+
+      // After successful registration, show subscription payment page
+      navigate('dashboard');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnectWallet = async () => {
+    try {
+      const address = await connectWallet();
+      setFormData({ ...formData, walletAddress: address });
+    } catch (err) {
+      setError('Failed to connect wallet');
+    }
+  };
+
+  const inputStyle = { width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' };
+  const labelStyle = { display: 'block', marginBottom: '8px', fontWeight: 'bold' };
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '700px', margin: '0 auto' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Create Your Supportly Account</h1>
+      <p style={{ textAlign: 'center', color: '#666', marginBottom: '40px' }}>
+        Join for just $49.95/year - Accept donations via Stripe, PayPal, USDC, Pera Wallet, and more
+      </p>
+
+      {error && (
+        <div style={{ padding: '15px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '6px', marginBottom: '20px' }}>
+          {error}
+        </div>
       )}
+
+      <form onSubmit={handleSubmit}>
+        <h3 style={{ marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #e0e0e0' }}>Basic Information</h3>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Username*</label>
+          <input
+            type="text"
+            required
+            value={formData.username}
+            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+            style={inputStyle}
+            placeholder="yourname"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Display Name*</label>
+          <input
+            type="text"
+            required
+            value={formData.displayName}
+            onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+            style={inputStyle}
+            placeholder="Your Name"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Email*</label>
+          <input
+            type="email"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            style={inputStyle}
+            placeholder="your@email.com"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Password*</label>
+          <input
+            type="password"
+            required
+            minLength="8"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            style={inputStyle}
+            placeholder="••••••••"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Confirm Password*</label>
+          <input
+            type="password"
+            required
+            minLength="8"
+            value={formData.confirmPassword}
+            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+            style={inputStyle}
+            placeholder="••••••••"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Bio</label>
+          <textarea
+            value={formData.bio}
+            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+            style={{ ...inputStyle, minHeight: '80px' }}
+            placeholder="Tell your supporters about yourself..."
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Avatar / Logo URL</label>
+          <input
+            type="url"
+            value={formData.avatarUrl}
+            onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+            style={inputStyle}
+            placeholder="https://example.com/your-logo.png"
+          />
+        </div>
+
+        <h3 style={{ marginTop: '30px', marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #e0e0e0' }}>Social Media Links</h3>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Twitter / X</label>
+          <input
+            type="url"
+            value={formData.twitter}
+            onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
+            style={inputStyle}
+            placeholder="https://twitter.com/yourhandle"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>YouTube</label>
+          <input
+            type="url"
+            value={formData.youtube}
+            onChange={(e) => setFormData({ ...formData, youtube: e.target.value })}
+            style={inputStyle}
+            placeholder="https://youtube.com/@yourchannel"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Instagram</label>
+          <input
+            type="url"
+            value={formData.instagram}
+            onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+            style={inputStyle}
+            placeholder="https://instagram.com/yourhandle"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>TikTok</label>
+          <input
+            type="url"
+            value={formData.tiktok}
+            onChange={(e) => setFormData({ ...formData, tiktok: e.target.value })}
+            style={inputStyle}
+            placeholder="https://tiktok.com/@yourhandle"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>LinkedIn</label>
+          <input
+            type="url"
+            value={formData.linkedin}
+            onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+            style={inputStyle}
+            placeholder="https://linkedin.com/in/yourprofile"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Facebook</label>
+          <input
+            type="url"
+            value={formData.facebook}
+            onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+            style={inputStyle}
+            placeholder="https://facebook.com/yourpage"
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Website</label>
+          <input
+            type="url"
+            value={formData.website}
+            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+            style={inputStyle}
+            placeholder="https://yourwebsite.com"
+          />
+        </div>
+
+        <h3 style={{ marginTop: '30px', marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #e0e0e0' }}>
+          Optional Features
+        </h3>
+
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+          <h4 style={{ marginBottom: '10px' }}>Algorand Wallet (Optional)</h4>
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+            Connect your Pera wallet to enable crypto donations and NFT features
+          </p>
+          {accountAddress ? (
+            <div style={{ fontSize: '14px', color: '#28a745', fontWeight: 'bold' }}>
+              Connected: {accountAddress.slice(0, 10)}...{accountAddress.slice(-8)}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectWallet}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Connect Pera Wallet
+            </button>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '16px',
+            fontSize: '18px',
+            backgroundColor: loading ? '#ccc' : '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            marginTop: '20px'
+          }}
+        >
+          {loading ? 'Creating Account...' : 'Create Account & Continue to Payment'}
+        </button>
+      </form>
+
+      <div style={{ textAlign: 'center', marginTop: '30px' }}>
+        <p style={{ color: '#666' }}>
+          Already have an account?{' '}
+          <button
+            onClick={() => navigate('login')}
+            style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Log in
+          </button>
+        </p>
+      </div>
     </div>
   );
 }
 
 // Dashboard Page Component
 function DashboardPage({ navigate }) {
-  const { user, accountAddress, disconnectWallet } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
   const [donations, setDonations] = useState([]);
 
@@ -435,10 +735,10 @@ function DashboardPage({ navigate }) {
           <p style={{ color: '#666' }}>Welcome back, {user.display_name}!</p>
         </div>
         <button
-          onClick={disconnectWallet}
+          onClick={() => { logout(); navigate('landing'); }}
           style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
         >
-          Disconnect
+          Log Out
         </button>
       </header>
 
@@ -628,7 +928,60 @@ function CreatorPage({ username, navigate }) {
             />
           )}
           <h1 style={{ fontSize: '32px', marginBottom: '8px', color: '#333' }}>{creator.display_name}</h1>
-          {creator.bio && <p style={{ fontSize: '16px', color: '#666', maxWidth: '500px', margin: '0 auto' }}>{creator.bio}</p>}
+          {creator.bio && <p style={{ fontSize: '16px', color: '#666', maxWidth: '500px', margin: '0 auto 20px auto' }}>{creator.bio}</p>}
+
+          {/* Social Media Icons */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px', flexWrap: 'wrap' }}>
+            {creator.twitter_url && (
+              <a href={creator.twitter_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#1DA1F2', fontSize: '28px', textDecoration: 'none', transition: 'transform 0.2s' }}
+                 title="Twitter / X">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', backgroundColor: '#1DA1F2', color: 'white', borderRadius: '50%', fontSize: '18px' }}>𝕏</span>
+              </a>
+            )}
+            {creator.youtube_url && (
+              <a href={creator.youtube_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#FF0000', fontSize: '28px', textDecoration: 'none' }}
+                 title="YouTube">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', backgroundColor: '#FF0000', color: 'white', borderRadius: '50%', fontSize: '18px' }}>▶</span>
+              </a>
+            )}
+            {creator.instagram_url && (
+              <a href={creator.instagram_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#E4405F', fontSize: '28px', textDecoration: 'none' }}
+                 title="Instagram">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', color: 'white', borderRadius: '50%', fontSize: '18px' }}>📷</span>
+              </a>
+            )}
+            {creator.tiktok_url && (
+              <a href={creator.tiktok_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#000', fontSize: '28px', textDecoration: 'none' }}
+                 title="TikTok">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', backgroundColor: '#000', color: 'white', borderRadius: '50%', fontSize: '18px' }}>♪</span>
+              </a>
+            )}
+            {creator.linkedin_url && (
+              <a href={creator.linkedin_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#0077B5', fontSize: '28px', textDecoration: 'none' }}
+                 title="LinkedIn">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', backgroundColor: '#0077B5', color: 'white', borderRadius: '50%', fontSize: '18px', fontWeight: 'bold' }}>in</span>
+              </a>
+            )}
+            {creator.facebook_url && (
+              <a href={creator.facebook_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#1877F2', fontSize: '28px', textDecoration: 'none' }}
+                 title="Facebook">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', backgroundColor: '#1877F2', color: 'white', borderRadius: '50%', fontSize: '18px', fontWeight: 'bold' }}>f</span>
+              </a>
+            )}
+            {creator.website_url && (
+              <a href={creator.website_url} target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#666', fontSize: '28px', textDecoration: 'none' }}
+                 title="Website">
+                <span style={{ display: 'inline-block', width: '36px', height: '36px', lineHeight: '36px', textAlign: 'center', backgroundColor: '#666', color: 'white', borderRadius: '50%', fontSize: '18px' }}>🌐</span>
+              </a>
+            )}
+          </div>
         </div>
 
         {/* Donation Widget - Buy Me A Coffee Style */}
