@@ -1369,13 +1369,14 @@ cron.schedule('0 9 * * 1', async () => {
 // START SERVER
 // =====================================================
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`
   ╔════════════════════════════════════════╗
   ║     🚀 AlgoPay Plus API Server        ║
   ║                                        ║
   ║  Server running on port ${PORT}         ║
   ║  Environment: ${process.env.NODE_ENV || 'development'}              ║
+  ║  Listening on: 0.0.0.0:${PORT}         ║
   ║                                        ║
   ║  Health: http://localhost:${PORT}/health  ║
   ╚════════════════════════════════════════╝
