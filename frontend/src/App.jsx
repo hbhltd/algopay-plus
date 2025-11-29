@@ -685,7 +685,7 @@ function SignupPage({ navigate }) {
 
 // Dashboard Page Component
 function DashboardPage({ navigate }) {
-  const { user, logout } = useContext(AuthContext);
+  const { user, accountAddress, logout } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
   const [donations, setDonations] = useState([]);
 
