@@ -66,7 +66,20 @@ app.get('/health', (req, res) => {
 // Create new creator
 app.post('/api/creators', async (req, res) => {
   try {
-    const { username, displayName, bio, email, walletAddress, twitter, youtube, website, avatar, avatarUrl } = req.body;
+    const {
+      username,
+      displayName,
+      bio,
+      email,
+      walletAddress,
+      twitter,
+      youtube,
+      website,
+      avatar,
+      avatarUrl,
+      stripeAccountId,
+      stripePublishableKey
+    } = req.body;
 
     // Check if username exists
     const { data: existing } = await supabase
@@ -91,7 +104,9 @@ app.post('/api/creators', async (req, res) => {
         twitter_url: twitter,
         youtube_url: youtube,
         website_url: website,
-        avatar_url: avatarUrl || avatar
+        avatar_url: avatarUrl || avatar,
+        stripe_account_id: stripeAccountId || null,
+        stripe_publishable_key: stripePublishableKey || null
       }])
       .select()
       .single();

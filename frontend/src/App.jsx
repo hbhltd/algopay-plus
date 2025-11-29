@@ -175,7 +175,9 @@ function SignupPage({ navigate }) {
     displayName: '',
     bio: '',
     email: '',
-    avatarUrl: ''
+    avatarUrl: '',
+    stripeAccountId: '',
+    stripePublishableKey: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -200,7 +202,9 @@ function SignupPage({ navigate }) {
           bio: formData.bio,
           email: formData.email,
           avatarUrl: formData.avatarUrl,
-          walletAddress
+          walletAddress,
+          stripeAccountId: formData.stripeAccountId,
+          stripePublishableKey: formData.stripePublishableKey
         })
       });
 
@@ -309,6 +313,46 @@ function SignupPage({ navigate }) {
               placeholder="https://example.com/your-logo.png"
             />
             <small style={{ color: '#666', fontSize: '14px' }}>Upload your logo to a service like imgur.com and paste the URL here</small>
+          </div>
+
+          <div style={{ marginTop: '40px', marginBottom: '20px', paddingTop: '20px', borderTop: '2px solid #e0e0e0' }}>
+            <h3 style={{ marginBottom: '15px', fontSize: '18px' }}>Payment Settings (Optional)</h3>
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
+              Configure how you receive payments. Your Algorand wallet is already connected for crypto donations.
+              Add your Stripe account details below to receive card payments directly.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Stripe Account ID (optional)
+            </label>
+            <input
+              type="text"
+              value={formData.stripeAccountId}
+              onChange={(e) => setFormData({ ...formData, stripeAccountId: e.target.value })}
+              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
+              placeholder="acct_xxxxxxxxxxxxx"
+            />
+            <small style={{ color: '#666', fontSize: '14px' }}>
+              For Stripe Connect. Leave empty to use platform payments.
+            </small>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Stripe Publishable Key (optional)
+            </label>
+            <input
+              type="text"
+              value={formData.stripePublishableKey}
+              onChange={(e) => setFormData({ ...formData, stripePublishableKey: e.target.value })}
+              style={{ width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }}
+              placeholder="pk_xxxxxxxxxxxxx"
+            />
+            <small style={{ color: '#666', fontSize: '14px' }}>
+              Your Stripe publishable key for direct payments.
+            </small>
           </div>
 
           {error && (
